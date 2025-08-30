@@ -1,14 +1,35 @@
-import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import crypto from 'crypto';
 
-export async function GET() {
-  const clientId = process.env.YAHOO_CLIENT_ID
-  const redirectUri = process.env.YAHOO_REDIRECT_URI
-  const scope = encodeURIComponent('fspt-r')
-
+export async function GET(req: Request) {
+  const clientId = process.env.YAHOO_CLIENT_ID;
+  const redirectUri = process.env.YAHOO_REDIRECT_URI;
   if (!clientId || !redirectUri) {
-    return new NextResponse('Missing YAHOO_CLIENT_ID or YAHOO_REDIRECT_URI', { status: 500 })
+    // Fail loudly so you know envs are missing
+    return NextResponse.json(
+      { ok: false, error: 'Missing YAHOO_CLIENT_ID or YAHOO_REDIRECT_URI' },
+      { status: 500 }
+    );
   }
-  const state = `rr-${Math.random().toString(36).slice(2,10)}`
-  const url = `https://api.login.yahoo.com/oauth2/request_auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`
-  return NextResponse.redirect(url)
+
+  // Minimal CSRF protection
+  const state = crypto.randomBytes(16).toString('hex');
+  cookies().set('y_state', state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 600, // 10 min
+  });
+
+  const auth = new URL('https://api.login.yahoo.com/oauth2/request_auth');
+  auth.searchParams.set('client_id', clientId);
+  auth.searchParams.set('redirect_uri', redirectUri);
+  auth.searchParams.set('response_type', 'code');
+  auth.searchParams.set('language', 'en-us');
+  auth.searchParams.set('scope', 'openid fspt-r'); // read-only Fantasy Sports
+  auth.searchParams.set('state', state);
+
+  return NextResponse.redirect(auth.toString(), { status: 302 });
 }
