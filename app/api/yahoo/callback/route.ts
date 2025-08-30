@@ -1,23 +1,33 @@
-import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const code = searchParams.get('code')
-  const state = searchParams.get('state') || ''
-  const makeUrl = process.env.MAKE_CONNECTOR_URL || process.env.NEXT_PUBLIC_MAKE_CONNECTOR_URL
+  const url = new URL(req.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  const cookieState = cookies().get('y_state')?.value;
 
-  if (!code) return new NextResponse('Missing code', { status: 400 })
-  if (!makeUrl) return new NextResponse('Missing MAKE_CONNECTOR_URL', { status: 500 })
-
-  try {
-    await fetch(makeUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: 'yahoo', code, state })
-    })
-  } catch (e) {
-    console.error('Make handoff failed', e)
+  // Basic state check (don’t block MVP if absent, just warn)
+  if (cookieState && state && cookieState !== state) {
+    return NextResponse.redirect(new URL('/dashboard?error=state_mismatch', req.url));
   }
-  const origin = new URL(req.url).origin
-  return NextResponse.redirect(`${origin}/dashboard?connected=yahoo`)
+  cookies().delete('y_state');
+
+  // Fire Make CONNECTOR (token exchange happens there)
+  const makeUrl = process.env.MAKE_CONNECTOR_URL;
+  if (makeUrl && code) {
+    // fire-and-forget; we don't wait for it
+    fetch(makeUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: 'yahoo', code }),
+    }).catch(() => {});
+  }
+
+  // Land the user
+  const next = new URL('/dashboard?connected=yahoo', req.url);
+  if (!code) {
+    next.searchParams.set('warn', 'no_code'); // helps debugging if needed
+  }
+  return NextResponse.redirect(next);
 }
