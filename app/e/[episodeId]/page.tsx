@@ -1,10 +1,11 @@
-import { supabase } from '@/lib/db';
+import { getSupabase } from '@/lib/db';
 
 export default async function EpisodePage({
   params,
 }: {
   params: { episodeId: string };
 }) {
+  const supabase = getSupabase();
   const { data } = await supabase
     .from('episode')
     .select('*')

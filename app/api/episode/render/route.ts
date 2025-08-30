@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { getSupabaseAdmin } from '@/lib/db';
 import { track } from '@/lib/metrics';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { episodeId, userId } = await req.json();
     if (!episodeId) {
       return NextResponse.json({ ok: false, error: 'missing episodeId' }, { status: 400 });

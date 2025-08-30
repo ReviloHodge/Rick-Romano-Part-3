@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db';
+import { getSupabaseAdmin } from '@/lib/db';
 import { computeFacts } from '@/lib/analysis/compute';
 import { buildScript } from '@/lib/analysis/script';
 import { track } from '@/lib/metrics';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { provider, leagueId, week, userId } = await req.json();
     if (!provider || !leagueId || !week) {
       return NextResponse.json({ ok: false, error: 'missing params' }, { status: 400 });

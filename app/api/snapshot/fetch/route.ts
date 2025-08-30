@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decryptToken } from '@/lib/security';
-import { supabaseAdmin, upsertSnapshot } from '@/lib/db';
+import { getSupabaseAdmin, upsertSnapshot } from '@/lib/db';
 import { track } from '@/lib/metrics';
 import { getLeagueWeekData as sleeperData } from '@/lib/providers/sleeper';
 import { getLeagueWeekData as yahooData } from '@/lib/providers/yahoo';
@@ -16,6 +16,7 @@ const lastCompletedWeek = (): number => {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { provider, leagueId, week, userId } = await req.json();
     if (!provider || !leagueId) {
       return NextResponse.json({ ok: false, error: 'missing params' }, { status: 400 });

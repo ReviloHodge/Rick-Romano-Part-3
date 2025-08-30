@@ -1,16 +1,33 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const url = process.env.SUPABASE_URL as string;
-const anon = process.env.SUPABASE_ANON_KEY as string;
-const service = process.env.SUPABASE_SERVICE_ROLE as string;
+let _supabase: SupabaseClient | null = null;
+let _supabaseAdmin: SupabaseClient | null = null;
 
-export const supabase: SupabaseClient = createClient(url, anon, {
-  auth: { persistSession: false },
-});
+export const getSupabase = (): SupabaseClient => {
+  if (!_supabase) {
+    const url = process.env.SUPABASE_URL;
+    const anon = process.env.SUPABASE_ANON_KEY;
+    if (!url || !anon) {
+      throw new Error('Missing Supabase client env vars');
+    }
+    _supabase = createClient(url, anon, { auth: { persistSession: false } });
+  }
+  return _supabase;
+};
 
-export const supabaseAdmin: SupabaseClient = createClient(url, service, {
-  auth: { persistSession: false },
-});
+export const getSupabaseAdmin = (): SupabaseClient => {
+  if (!_supabaseAdmin) {
+    const url = process.env.SUPABASE_URL;
+    const service = process.env.SUPABASE_SERVICE_ROLE;
+    if (!url || !service) {
+      throw new Error('Missing Supabase service env vars');
+    }
+    _supabaseAdmin = createClient(url, service, {
+      auth: { persistSession: false },
+    });
+  }
+  return _supabaseAdmin;
+};
 
 // Example query helper
 export const upsertSnapshot = async (
@@ -19,7 +36,7 @@ export const upsertSnapshot = async (
   week: number,
   raw_json: any
 ) => {
-  return supabaseAdmin.from('league_snapshot').upsert({
+  return getSupabaseAdmin().from('league_snapshot').upsert({
     provider,
     league_id: leagueId,
     week,

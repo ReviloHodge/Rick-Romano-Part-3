@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { encryptToken } from '@/lib/security';
-import { supabaseAdmin } from '@/lib/db';
+import { getSupabaseAdmin } from '@/lib/db';
 import { track } from '@/lib/metrics';
 import { listLeagues } from '@/lib/providers/sleeper';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { code, userId } = await req.json();
     if (!code) {
       return NextResponse.json({ ok: false, error: 'missing code' }, { status: 400 });
