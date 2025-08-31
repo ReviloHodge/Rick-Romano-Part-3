@@ -1,8 +1,32 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import crypto from 'crypto';
+import { oauthExchange } from '../../../../lib/providers/yahoo';
 
+/**
+ * GET /api/auth/yahoo
+ *
+ * Dual-purpose handler:
+ * - Without `?code` it redirects to Yahoo's auth page.
+ * - With `?code` it exchanges tokens and redirects to dashboard.
+ */
 export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const code = url.searchParams.get('code');
+  const userId = url.searchParams.get('userId');
+  const stateParam = url.searchParams.get('state');
+  const debug = url.searchParams.get('debug') === '1';
+
+  if (code) {
+    const tokens = await oauthExchange(code);
+    const uid = userId || stateParam;
+    if (tokens && uid) {
+      const store = (globalThis as any).yahooTokenStore ||
+        ((globalThis as any).yahooTokenStore = new Map<string, any>());
+      store.set(uid, tokens);
+    }
+    return NextResponse.redirect(new URL('/dashboard?provider=yahoo', req.url));
+  }
+
   const clientId = process.env.YAHOO_CLIENT_ID;
   const redirectUri = process.env.YAHOO_REDIRECT_URI;
   if (!clientId || !redirectUri) {
@@ -12,22 +36,13 @@ export async function GET(req: Request) {
     );
   }
 
-  const debug = new URL(req.url).searchParams.get('debug') === '1';
-
-  const state = crypto.randomBytes(16).toString('hex');
-  cookies().set('y_state', state, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 600,
-  });
+  const state = userId || crypto.randomBytes(16).toString('hex');
 
   const auth = new URL('https://api.login.yahoo.com/oauth2/request_auth');
   auth.searchParams.set('client_id', clientId);
   auth.searchParams.set('redirect_uri', redirectUri);
   auth.searchParams.set('response_type', 'code');
-  auth.searchParams.set('scope', 'openid fspt-r');
+  auth.searchParams.set('scope', 'fspt-r');
   auth.searchParams.set('language', 'en-us');
   auth.searchParams.set('state', state);
 
