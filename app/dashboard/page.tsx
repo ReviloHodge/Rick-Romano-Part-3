@@ -58,7 +58,10 @@ export default function Dashboard() {
         )}
 
         <p className="text-sm text-gray-400">
-          Health: <a className="underline" href="/ok">/ok</a>
+          Health:{" "}
+          <a className="underline" href="/ok">
+            /ok
+          </a>
         </p>
       </div>
     </main>

@@ -1,3 +1,4 @@
+// app/api/auth/yahoo/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getOrCreateUid } from '../../../../lib/user';
@@ -12,7 +13,7 @@ function buildAuth(clientId: string, redirectUri: string, state: string) {
   auth.searchParams.set('client_id', clientId);
   auth.searchParams.set('redirect_uri', redirectUri);
   auth.searchParams.set('response_type', 'code');
-  auth.searchParams.set('scope', 'openid fspt-r'); // Fantasy Sports read
+  auth.searchParams.set('scope', 'openid fspt-r'); // Fantasy Sports read scope
   auth.searchParams.set('language', 'en-us');
   auth.searchParams.set('state', state);
   return auth;
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
   const code = url.searchParams.get('code');
   const debug = url.searchParams.get('debug') === '1';
 
-  // Callback branch
+  // --- Callback branch ---
   if (code) {
     const stateParam = url.searchParams.get('state');
     const userIdParam = url.searchParams.get('userId');
@@ -73,13 +74,13 @@ export async function GET(req: NextRequest) {
       }
     } catch (err) {
       console.error('Yahoo oauthExchange failed:', err);
-      // continue; you can surface an error toast later
+      // Continue to dashboard; surface an error toast later if desired
     }
 
     return NextResponse.redirect(new URL('/dashboard?provider=yahoo', req.url));
   }
 
-  // Start-auth branch
+  // --- Start-auth branch ---
   const userIdParam = url.searchParams.get('userId');
   const { uid, headers } = getOrCreateUid(req);
   const state = userIdParam ?? uid;
