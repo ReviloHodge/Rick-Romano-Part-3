@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getOrCreateUid } from '../../../../lib/user';
+import { oauthExchange } from '../../../../lib/providers/yahoo';
 
 /**
  * Build Yahoo OAuth authorize URL.
@@ -21,13 +22,18 @@ function buildAuth(clientId: string, redirectUri: string, state: string) {
 
 /**
  * GET /api/auth/yahoo
- * Starts the OAuth flow by redirecting to Yahoo with a stable `state`.
- * `state` is the anonymous uid cookie (or `userId` query param if provided).
+ *
+ * Dual-purpose:
+ *  - If called WITHOUT ?code=: start the OAuth flow (redirect to Yahoo).
+ *  - If called WITH    ?code=: handle callback, exchange code for tokens,
+ *    stash tokens (stub), then redirect to /dashboard?provider=yahoo.
+ *
  * Supports ?debug=1 to return the built URL as JSON instead of redirecting.
  */
 export async function GET(req: NextRequest) {
   const clientId = process.env.YAHOO_CLIENT_ID;
   const redirectUri = process.env.YAHOO_REDIRECT_URI;
+
   if (!clientId || !redirectUri) {
     return NextResponse.json(
       { ok: false, error: 'Missing YAHOO_CLIENT_ID or YAHOO_REDIRECT_URI' },
@@ -36,16 +42,39 @@ export async function GET(req: NextRequest) {
   }
 
   const url = new URL(req.url);
+  const code = url.searchParams.get('code');
   const debug = url.searchParams.get('debug') === '1';
-  const userIdParam = url.searchParams.get('userId');
 
-  // Ensure we have a durable uid cookie we can reuse as OAuth state
-  const { uid, headers } = getOrCreateUid(req);
+  // --- Callback branch: Yahoo redirected back with ?code= ---
+  if (code) {
+    const stateParam = url.searchParams.get('state');     // set during start
+    const userIdParam = url.searchParams.get('userId');   // optional override
+    const uid = userIdParam ?? stateParam ?? null;
+
+    try {
+      const tokens = await oauthExchange(code); // Basic Auth done in provider impl
+      if (tokens && uid) {
+        // Minimal in-memory token store (replace with DB upsert in your app)
+        const store =
+          (globalThis as any).yahooTokenStore ??
+          ((globalThis as any).yahooTokenStore = new Map<string, any>());
+        store.set(uid, tokens);
+      }
+    } catch (err) {
+      console.error('Yahoo oauthExchange failed:', err);
+      // Proceed to redirect; surface an error toast via querystring later if you want
+    }
+
+    return NextResponse.redirect(new URL('/dashboard?provider=yahoo', req.url));
+  }
+
+  // --- Start-auth branch: build URL and redirect to Yahoo ---
+  const userIdParam = url.searchParams.get('userId');
+  const { uid, headers } = getOrCreateUid(req); // ensures a durable uid cookie
   const state = userIdParam ?? uid;
 
   const auth = buildAuth(clientId, redirectUri, state);
 
-  // If debug, return the URL + state as JSON and also set any cookie headers
   if (debug) {
     return new NextResponse(
       JSON.stringify({ ok: true, auth: auth.toString(), state }),
@@ -59,7 +88,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Normal path: redirect to Yahoo and include any cookie headers from getOrCreateUid
   return new NextResponse(null, {
     status: 302,
     headers: {
@@ -77,6 +105,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const clientId = process.env.YAHOO_CLIENT_ID;
   const redirectUri = process.env.YAHOO_REDIRECT_URI;
+
   if (!clientId || !redirectUri) {
     return NextResponse.json(
       { ok: false, error: 'Missing YAHOO_CLIENT_ID or YAHOO_REDIRECT_URI' },
