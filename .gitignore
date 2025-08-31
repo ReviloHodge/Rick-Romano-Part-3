@@ -1,15 +1,25 @@
+# Dependencies
 node_modules/
+
+# Next.js build output
 .next/
+out/
+build/
+dist/
+
+# Env files (keep example tracked)
 .env
 .env.local
 .env.*
 !.env.example
 
+# Coverage
+coverage/
+
+# Vercel
+.vercel/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# build output
-out/
-build/

@@ -18,8 +18,14 @@ export async function POST(_req: Request) {
   return NextResponse.json({
     ok: true,
     provider: 'sleeper',
-    stub: true,
+    oauth: false,
     auth: null,
-    note: 'Sleeper uses public endpoints; collect League URL/ID on the dashboard.',
+    note: 'Sleeper uses public endpoints; paste League URL/ID (or username+season) on the dashboard.',
+    next: {
+      resolve: '/api/sleeper/resolve',
+      snapshot: '/api/snapshot/fetch',
+      generate: '/api/episode/generate',
+      render: '/api/episode/render',
+    },
   });
 }
