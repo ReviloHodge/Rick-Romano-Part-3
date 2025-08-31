@@ -1,19 +1,25 @@
+// app/api/auth/sleeper/route.ts
 import { NextResponse } from 'next/server';
 
-export async function GET() {
-  const clientId = process.env.SLEEPER_CLIENT_ID;
-  const redirectUri = process.env.SLEEPER_REDIRECT_URI;
-  if (!clientId || !redirectUri) {
-    return NextResponse.json(
-      { ok: false, error: 'Missing SLEEPER_CLIENT_ID or SLEEPER_REDIRECT_URI' },
-      { status: 500 }
-    );
-  }
+/**
+ * GET /api/auth/sleeper
+ * Sleeper league data is public; we don't need OAuth.
+ * Just send the user to the dashboard flow for entering a League URL/ID.
+ */
+export async function GET(req: Request) {
+  return NextResponse.redirect(new URL('/dashboard?provider=sleeper', req.url));
+}
 
-  const auth = new URL('https://api.sleeper.app/oauth/authorize');
-  auth.searchParams.set('client_id', clientId);
-  auth.searchParams.set('redirect_uri', redirectUri);
-  auth.searchParams.set('response_type', 'code');
-
-  return NextResponse.redirect(auth.toString(), { status: 302 });
+/**
+ * POST /api/auth/sleeper
+ * Optional helper for programmatic callers; indicates no OAuth flow.
+ */
+export async function POST(_req: Request) {
+  return NextResponse.json({
+    ok: true,
+    provider: 'sleeper',
+    stub: true,
+    auth: null,
+    note: 'Sleeper uses public endpoints; collect League URL/ID on the dashboard.',
+  });
 }
