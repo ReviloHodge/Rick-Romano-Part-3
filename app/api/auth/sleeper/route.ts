@@ -6,15 +6,21 @@ import { listLeagues } from '@/lib/providers/sleeper';
 
 async function exchange(code: string, userId?: string | null) {
   const supabaseAdmin = getSupabaseAdmin();
+  const clientId = process.env.SLEEPER_CLIENT_ID;
+  const clientSecret = process.env.SLEEPER_CLIENT_SECRET;
+  const redirectUri = process.env.SLEEPER_REDIRECT_URI;
+  if (!clientId || !clientSecret || !redirectUri) {
+    throw new Error('sleeper_not_configured');
+  }
   const tokenRes = await fetch('https://api.sleeper.app/v1/oauth/token', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       code,
-      client_id: process.env.SLEEPER_CLIENT_ID,
-      client_secret: process.env.SLEEPER_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       grant_type: 'authorization_code',
-      redirect_uri: process.env.SLEEPER_REDIRECT_URI,
+      redirect_uri: redirectUri,
     }),
   });
   if (!tokenRes.ok) {
@@ -43,10 +49,18 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const userId = req.nextUrl.searchParams.get('userId');
   if (!code) {
+    const clientId = process.env.SLEEPER_CLIENT_ID;
+    const redirectUri = process.env.SLEEPER_REDIRECT_URI;
+    if (!clientId || !redirectUri) {
+      return NextResponse.json(
+        { ok: false, error: 'sleeper_not_configured' },
+        { status: 500 }
+      );
+    }
     const auth = new URL('https://sleeper.com/oauth2/authorize');
     auth.searchParams.set('response_type', 'code');
-    auth.searchParams.set('client_id', process.env.SLEEPER_CLIENT_ID || '');
-    auth.searchParams.set('redirect_uri', process.env.SLEEPER_REDIRECT_URI || '');
+    auth.searchParams.set('client_id', clientId);
+    auth.searchParams.set('redirect_uri', redirectUri);
     if (userId) auth.searchParams.set('state', userId);
     return NextResponse.redirect(auth.toString());
   }

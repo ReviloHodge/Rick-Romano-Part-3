@@ -6,6 +6,12 @@ import { oauthExchange, listLeagues } from '@/lib/providers/yahoo';
 
 async function exchange(code: string, userId?: string | null) {
   const supabaseAdmin = getSupabaseAdmin();
+  const clientId = process.env.YAHOO_CLIENT_ID;
+  const clientSecret = process.env.YAHOO_CLIENT_SECRET;
+  const redirectUri = process.env.YAHOO_REDIRECT_URI;
+  if (!clientId || !clientSecret || !redirectUri) {
+    throw new Error('yahoo_not_configured');
+  }
   const tokens = await oauthExchange(code);
   const access_enc = await encryptToken(tokens.access_token);
   const refresh_enc = tokens.refresh_token
@@ -31,9 +37,17 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const userId = req.nextUrl.searchParams.get('userId');
   if (!code) {
+    const clientId = process.env.YAHOO_CLIENT_ID;
+    const redirectUri = process.env.YAHOO_REDIRECT_URI;
+    if (!clientId || !redirectUri) {
+      return NextResponse.json(
+        { ok: false, error: 'yahoo_not_configured' },
+        { status: 500 }
+      );
+    }
     const auth = new URL('https://api.login.yahoo.com/oauth2/request_auth');
-    auth.searchParams.set('client_id', process.env.YAHOO_CLIENT_ID || '');
-    auth.searchParams.set('redirect_uri', process.env.YAHOO_REDIRECT_URI || '');
+    auth.searchParams.set('client_id', clientId);
+    auth.searchParams.set('redirect_uri', redirectUri);
     auth.searchParams.set('response_type', 'code');
     if (userId) auth.searchParams.set('state', userId);
     return NextResponse.redirect(auth.toString());
