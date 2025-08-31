@@ -1,3 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom overrides */
 :root {
   --bg: #fff;
   --fg: #111;
@@ -12,21 +17,13 @@ html, body {
 }
 
 .container {
-  max-width: 72rem;
-  margin: 0 auto;
+  @apply max-w-6xl mx-auto;
 }
 
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  padding: 0.75rem 1.25rem;
+  @apply inline-flex items-center justify-center rounded-xl px-5 py-3 border hover:bg-gray-50;
 }
 
 .card {
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
-  padding: 1rem;
+  @apply border rounded-xl shadow-sm p-4;
 }
