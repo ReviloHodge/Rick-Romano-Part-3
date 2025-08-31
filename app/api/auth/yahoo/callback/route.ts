@@ -1,23 +1,17 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
-  const cookieState = cookies().get('y_state')?.value;
-
-  if (cookieState && state && cookieState !== state) {
-    return NextResponse.redirect(new URL('/dashboard?error=state_mismatch', req.url));
-  }
-  cookies().delete('y_state');
+  const userId = url.searchParams.get('state');
 
   const makeUrl = process.env.MAKE_CONNECTOR_URL;
   if (makeUrl && code) {
     fetch(makeUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ provider: 'yahoo', code }),
+      body: JSON.stringify({ provider: 'yahoo', code, userId }),
     }).catch(() => {});
   }
 

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import crypto from 'crypto';
+import type { NextRequest } from 'next/server';
+import { getOrCreateUid } from '../../../../lib/user';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const clientId = process.env.YAHOO_CLIENT_ID;
   const redirectUri = process.env.YAHOO_REDIRECT_URI;
   if (!clientId || !redirectUri) {
@@ -12,16 +12,11 @@ export async function GET(req: Request) {
     );
   }
 
-  const debug = new URL(req.url).searchParams.get('debug') === '1';
-
-  const state = crypto.randomBytes(16).toString('hex');
-  cookies().set('y_state', state, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 600,
-  });
+  const url = new URL(req.url);
+  const debug = url.searchParams.get('debug') === '1';
+  const userIdParam = url.searchParams.get('userId');
+  const { uid, headers } = getOrCreateUid(req);
+  const userId = userIdParam ?? uid;
 
   const auth = new URL('https://api.login.yahoo.com/oauth2/request_auth');
   auth.searchParams.set('client_id', clientId);
@@ -29,10 +24,11 @@ export async function GET(req: Request) {
   auth.searchParams.set('response_type', 'code');
   auth.searchParams.set('scope', 'openid fspt-r');
   auth.searchParams.set('language', 'en-us');
-  auth.searchParams.set('state', state);
+  auth.searchParams.set('state', userId);
 
+  const init = headers ? { headers } : undefined;
   if (debug) {
-    return NextResponse.json({ ok: true, auth: auth.toString() });
+    return NextResponse.json({ ok: true, auth: auth.toString() }, init);
   }
-  return NextResponse.redirect(auth.toString(), { status: 302 });
+  return NextResponse.redirect(auth.toString(), { status: 302, ...(init || {}) });
 }
