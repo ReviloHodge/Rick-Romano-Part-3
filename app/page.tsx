@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col">
@@ -12,16 +10,15 @@ export default function Home() {
             Weekly podcast recaps for Sleeper and Yahoo fantasy football leagues.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/api/auth/sleeper" prefetch={false} className="btn">
+            <a href="/api/auth/sleeper" className="btn">
               Connect Sleeper
-            </Link>
-            <Link
+            </a>
+            <a
               href="/api/auth/yahoo"
-              prefetch={false}
               className="rounded-xl px-5 py-3 border hover:bg-gray-50"
             >
               Connect Yahoo
-            </Link>
+            </a>
           </div>
         </div>
       </section>

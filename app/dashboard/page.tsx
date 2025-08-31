@@ -2,8 +2,6 @@ interface Props {
   searchParams?: { provider?: string };
 }
 
-import Link from 'next/link';
-
 export default function Dashboard({ searchParams }: Props) {
   const provider = searchParams?.provider;
   return (
@@ -16,12 +14,12 @@ export default function Dashboard({ searchParams }: Props) {
               Connect your fantasy provider to get started.
             </p>
             <div className="flex gap-3">
-              <Link href="/api/auth/sleeper" prefetch={false} className="btn">
+              <a href="/api/auth/sleeper" className="btn">
                 Connect Sleeper
-              </Link>
-              <Link href="/api/auth/yahoo" prefetch={false} className="btn">
+              </a>
+              <a href="/api/auth/yahoo" className="btn">
                 Connect Yahoo
-              </Link>
+              </a>
             </div>
           </div>
         ) : (
