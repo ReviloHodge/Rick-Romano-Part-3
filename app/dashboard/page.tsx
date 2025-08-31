@@ -1,43 +1,46 @@
-// app/dashboard/page.tsx
-import Link from 'next/link';
+"use client";
 
-export default function Dashboard({
-  searchParams,
-}: {
-  searchParams?: { connected?: string };
-}) {
-  const connected = searchParams?.connected;
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+export default function Dashboard() {
+  const [provider, setProvider] = useState<string | null>(null);
+
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    setProvider(search.get('provider'));
+  }, []);
+
+  const handleYahoo = () => {
+    const uid = localStorage.getItem('uid') ?? crypto.randomUUID();
+    localStorage.setItem('uid', uid);
+    window.location.href = `/api/auth/yahoo?userId=${encodeURIComponent(uid)}`;
+  };
 
   return (
     <main className="min-h-screen px-6 py-16">
       <div className="container space-y-6">
         <h1 className="text-3xl font-extrabold">Dashboard</h1>
 
-        {connected ? (
-          <div className="card">
-            <p className="text-green-700 font-semibold">
-              ✅ {connected === 'yahoo' ? 'Yahoo' : 'Sleeper'} connected successfully.
-            </p>
-            <p className="text-sm text-gray-600">
-              You can re-connect or fetch last week&apos;s snapshot next.
-            </p>
-          </div>
+        {provider ? (
+          <p>Provider connected: {provider}</p>
         ) : (
-          <div className="card">
-            <p className="text-amber-700 font-semibold">
-              No provider connected yet.
-            </p>
-            <p className="text-sm text-gray-600">Start below.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/dashboard?provider=sleeper" className="btn">
+              Connect Sleeper
+            </a>
+            <button
+              onClick={handleYahoo}
+              className="rounded-xl px-5 py-3 border hover:bg-gray-50"
+            >
+              Connect Yahoo
+            </button>
           </div>
         )}
 
-        <div className="flex gap-3">
-          <a href="/api/auth/sleeper" className="btn">Connect Sleeper</a>
-          <a href="/api/auth/yahoo" className="btn">Connect Yahoo</a>
-          <Link href="/" className="rounded-xl px-5 py-3 border hover:bg-gray-50">
-            Back to Home
-          </Link>
-        </div>
+        <Link href="/" className="rounded-xl px-5 py-3 border hover:bg-gray-50">
+          Back to Home
+        </Link>
 
         <p className="text-sm text-gray-400">Health: <a className="underline" href="/ok">/ok</a></p>
       </div>
