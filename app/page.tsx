@@ -10,9 +10,12 @@ export default function Home() {
           Connect Sleeper or Yahoo. Get a weekly podcast that roasts your rivals and recaps every clutch move.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <a href="/dashboard" className="btn">Connect your league</a>
-          <a href="/api/yahoo/start" className="rounded-xl px-5 py-3 border hover:bg-gray-50">
-            Connect Yahoo (Beta)
+          <a href="/api/auth/sleeper" className="btn">Connect Sleeper</a>
+          <a
+            href="/api/auth/yahoo"
+            className="rounded-xl px-5 py-3 border hover:bg-gray-50"
+          >
+            Connect Yahoo
           </a>
         </div>
         <p className="text-sm text-gray-500">You’re in control. Disconnect anytime.</p>
