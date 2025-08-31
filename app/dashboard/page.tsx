@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -57,13 +58,4 @@ export default function Dashboard() {
           </div>
         )}
 
-        <p className="text-sm text-gray-400">
-          Health:{" "}
-          <a className="underline" href="/ok">
-            /ok
-          </a>
-        </p>
-      </div>
-    </main>
-  );
-}
+        <p cl
