@@ -22,7 +22,13 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@supabase/supabase-js": ["lib/stubs/supabase.ts"],
+      "posthog-node": ["lib/stubs/posthog.ts"]
+    }
   },
   "include": [
     "next-env.d.ts",

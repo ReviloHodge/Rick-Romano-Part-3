@@ -32,7 +32,7 @@ export default function Dashboard() {
               Connect Sleeper
             </a>
 
-            {/* Yahoo: OAuth with uid */}
+            {/* Yahoo: OAuth with uid as state */}
             <button
               onClick={handleYahoo}
               className="rounded-xl px-5 py-3 border hover:bg-gray-50"
@@ -45,12 +45,12 @@ export default function Dashboard() {
         {/* Back to home */}
         <Link
           href="/"
-          className="rounded-xl px-5 py-3 border hover:bg-gray-50"
+          className="rounded-xl px-5 py-3 border hover:bg-gray-50 inline-block"
         >
           Back to Home
         </Link>
 
-        {/* Sleeper league form when connected */}
+        {/* Sleeper league flow */}
         {provider === "sleeper" && (
           <div className="card space-y-3">
             <SleeperLeagueForm />
