@@ -2,12 +2,15 @@
 Minimal Next.js 14 + Tailwind starter with:
 - `/` landing page
 - `/ok` health route
-- `/api/yahoo/start` Yahoo OAuth redirect
-- `/api/yahoo/callback` posts `{ provider:'yahoo', code }` to Make.com webhook
+- `/api/auth/sleeper` Sleeper OAuth redirect
+- `/api/auth/yahoo` Yahoo OAuth redirect
+- `/api/auth/*/callback` posts `{ provider, code }` to Make.com webhook
 
 ## Env vars (Vercel → Project → Settings → Environment Variables)
-- `YAHOO_CLIENT_ID` — from Yahoo Developer app
-- `YAHOO_REDIRECT_URI` — `https://<your-vercel-domain>/api/yahoo/callback`
+- `SLEEPER_CLIENT_ID` / `SLEEPER_CLIENT_SECRET`
+- `SLEEPER_REDIRECT_URI` — `https://<your-domain>/api/auth/sleeper/callback`
+- `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`
+- `YAHOO_REDIRECT_URI` — `https://<your-domain>/api/auth/yahoo/callback`
 - `MAKE_CONNECTOR_URL` — your Make "connector.start" webhook URL
 - (optional) `NEXT_PUBLIC_MAKE_CONNECTOR_URL` — same as above if you prefer exposing to client
 
@@ -15,4 +18,4 @@ Minimal Next.js 14 + Tailwind starter with:
 1. Import repo into Vercel (Framework: Next.js)
 2. Leave Root Directory blank (repo root)
 3. Set env vars above and deploy
-4. Test `/ok` and `/api/yahoo/start`
+4. Test `/ok` and `/api/auth/yahoo`
