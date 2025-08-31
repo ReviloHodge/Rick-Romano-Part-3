@@ -1,4 +1,3 @@
-// Server Component
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16">
@@ -10,7 +9,7 @@ export default function Home() {
           Connect Sleeper or Yahoo. Get a weekly podcast that roasts your rivals and recaps every clutch move.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <a href="/api/auth/sleeper" className="btn">Connect Sleeper</a>
+          <a href="/dashboard?provider=sleeper" className="btn">Connect Sleeper</a>
           <a
             href="/api/auth/yahoo"
             className="rounded-xl px-5 py-3 border hover:bg-gray-50"
