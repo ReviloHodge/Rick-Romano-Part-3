@@ -1,3 +1,14 @@
+codex/build-mvp-fantasy-football-podcast-app
+node_modules
+.env
+.env.local
+.env.*.local
+.next
+out
+dist
+coverage
+.vercel
+
 node_modules/
 .next/
 .env
