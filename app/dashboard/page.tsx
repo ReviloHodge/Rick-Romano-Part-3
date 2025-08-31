@@ -1,19 +1,20 @@
 "use client";
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import SleeperLeagueForm from "./SleeperLeagueForm";
 
 export default function Dashboard() {
   const [provider, setProvider] = useState<string | null>(null);
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
-    setProvider(search.get('provider'));
+    setProvider(search.get("provider"));
   }, []);
 
   const handleYahoo = () => {
-    const uid = localStorage.getItem('uid') ?? crypto.randomUUID();
-    localStorage.setItem('uid', uid);
+    const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
+    localStorage.setItem("uid", uid);
     window.location.href = `/api/auth/yahoo?userId=${encodeURIComponent(uid)}`;
   };
 
@@ -26,9 +27,12 @@ export default function Dashboard() {
           <p>Provider connected: {provider}</p>
         ) : (
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {/* Sleeper: direct link (no OAuth) */}
             <a href="/dashboard?provider=sleeper" className="btn">
               Connect Sleeper
             </a>
+
+            {/* Yahoo: OAuth with uid */}
             <button
               onClick={handleYahoo}
               className="rounded-xl px-5 py-3 border hover:bg-gray-50"
@@ -38,11 +42,27 @@ export default function Dashboard() {
           </div>
         )}
 
-        <Link href="/" className="rounded-xl px-5 py-3 border hover:bg-gray-50">
+        {/* Back to home */}
+        <Link
+          href="/"
+          className="rounded-xl px-5 py-3 border hover:bg-gray-50"
+        >
           Back to Home
         </Link>
 
-        <p className="text-sm text-gray-400">Health: <a className="underline" href="/ok">/ok</a></p>
+        {/* Sleeper league form when connected */}
+        {provider === "sleeper" && (
+          <div className="card space-y-3">
+            <SleeperLeagueForm />
+          </div>
+        )}
+
+        <p className="text-sm text-gray-400">
+          Health:{" "}
+          <a className="underline" href="/ok">
+            /ok
+          </a>
+        </p>
       </div>
     </main>
   );
