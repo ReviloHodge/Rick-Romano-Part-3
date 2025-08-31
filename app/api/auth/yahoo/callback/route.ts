@@ -7,16 +7,13 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state');
   const cookieState = cookies().get('y_state')?.value;
 
-  // Basic state check (don’t block MVP if absent, just warn)
   if (cookieState && state && cookieState !== state) {
     return NextResponse.redirect(new URL('/dashboard?error=state_mismatch', req.url));
   }
   cookies().delete('y_state');
 
-  // Fire Make CONNECTOR (token exchange happens there)
   const makeUrl = process.env.MAKE_CONNECTOR_URL;
   if (makeUrl && code) {
-    // fire-and-forget; we don't wait for it
     fetch(makeUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -24,10 +21,9 @@ export async function GET(req: Request) {
     }).catch(() => {});
   }
 
-  // Land the user
   const next = new URL('/dashboard?connected=yahoo', req.url);
   if (!code) {
-    next.searchParams.set('warn', 'no_code'); // helps debugging if needed
+    next.searchParams.set('warn', 'no_code');
   }
   return NextResponse.redirect(next);
 }

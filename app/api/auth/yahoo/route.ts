@@ -1,4 +1,3 @@
-// app/api/yahoo/start/route.ts
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
@@ -13,7 +12,6 @@ export async function GET(req: Request) {
     );
   }
 
-  // Optional: debug mode shows the URL instead of redirecting
   const debug = new URL(req.url).searchParams.get('debug') === '1';
 
   const state = crypto.randomBytes(16).toString('hex');
