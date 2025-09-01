@@ -9,13 +9,20 @@ import { encryptToken } from '../../../../lib/security';
 import { getSupabaseAdmin } from '../../../../lib/db';
 import { track } from '../../../../lib/metrics';
 
-/** Build Yahoo OAuth authorize URL */
+/**
+ * Build Yahoo OAuth authorize URL.
+ * Required: client_id, redirect_uri, response_type=code, scope=fspt-r, state
+ * Note: We intentionally use ONLY `fspt-r` to avoid OpenID requirements.
+ */
 function buildAuth(clientId: string, redirectUri: string, state: string) {
+  // Normalize redirect to avoid accidental trailing slash mismatches
+  const normalizedRedirect = redirectUri.replace(/\/+$/, '');
+
   const auth = new URL('https://api.login.yahoo.com/oauth2/request_auth');
   auth.searchParams.set('client_id', clientId);
-  auth.searchParams.set('redirect_uri', redirectUri);
+  auth.searchParams.set('redirect_uri', normalizedRedirect);
   auth.searchParams.set('response_type', 'code');
-  auth.searchParams.set('scope', 'openid fspt-r'); // Fantasy Sports read
+  auth.searchParams.set('scope', 'fspt-r'); // Fantasy Sports read only
   auth.searchParams.set('language', 'en-us');
   auth.searchParams.set('state', state);
   return auth;
