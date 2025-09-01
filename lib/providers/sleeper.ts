@@ -79,6 +79,9 @@ export async function getLeagueWeek(leagueId: string, week: number) {
   return { raw: { matchups, rosters, users }, domain };
 }
 
+// Backwards-compatible export for existing imports
+export const getLeagueWeekData = getLeagueWeek;
+
 export function toDomain(
   league: LeagueMeta,
   week: number,
