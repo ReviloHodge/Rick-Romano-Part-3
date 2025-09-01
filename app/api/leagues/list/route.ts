@@ -8,12 +8,16 @@ import { listLeagues as yahooListLeagues, League } from '../../../../lib/provide
 
 export const dynamic = 'force-dynamic';
 
+function err(stage: string, detail?: unknown, status = 500) {
+  // Never leak low-level messages to the client; include stage for triage.
+  if (detail) console.error(`[leagues_list] ${stage}`, detail);
+  return NextResponse.json({ ok: false, error: `internal_error:${stage}` }, { status });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const provider = (req.nextUrl.searchParams.get('provider') || '').toLowerCase();
-    if (!provider) {
-      return NextResponse.json({ ok: false, error: 'missing_provider' }, { status: 400 });
-    }
+    if (!provider) return err('missing_provider', null, 400);
 
     const { uid, headers } = getOrCreateUid(req);
 
@@ -24,18 +28,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    if (provider !== 'yahoo') {
-      return NextResponse.json({ ok: false, error: 'unsupported_provider' }, { status: 400 });
-    }
+    if (provider !== 'yahoo') return err('unsupported_provider', null, 400);
 
+    // STAGE A: Supabase admin
     const supabase = getSupabaseAdmin?.();
-    if (!supabase) {
-      return new NextResponse(JSON.stringify({ ok: false, error: 'missing_supabase_admin' }), {
-        status: 500,
-        headers: { 'content-type': 'application/json', ...(headers ?? {}) },
-      });
-    }
+    if (!supabase) return err('supabase_admin_missing');
 
+    // STAGE B: Load connection row
     const { data, error } = await supabase
       .from('league_connection')
       .select('access_token_enc, refresh_token_enc, expires_at')
@@ -43,31 +42,33 @@ export async function GET(req: NextRequest) {
       .eq('provider', 'yahoo')
       .maybeSingle();
 
-    if (error) {
-      console.error('supabase_error', error);
-      return NextResponse.json({ ok: false, error: 'db_error' }, { status: 500 });
+    if (error) return err('db_select', error);
+    if (!data?.access_token_enc) return err('no_tokens', null, 401);
+
+    // STAGE C: Decrypt token
+    let accessToken: string;
+    try {
+      accessToken = await decryptToken(data.access_token_enc);
+    } catch (e) {
+      return err('decrypt_access_token', e);
     }
 
-    if (!data?.access_token_enc) {
-      return new NextResponse(JSON.stringify({ ok: false, error: 'no_tokens' }), {
-        status: 401,
-        headers: { 'content-type': 'application/json', ...(headers ?? {}) },
-      });
+    // STAGE D: Yahoo listLeagues
+    let leagues: League[] = [];
+    try {
+      leagues = await yahooListLeagues(accessToken);
+      if (!Array.isArray(leagues)) leagues = [];
+    } catch (e) {
+      return err('yahoo_listLeagues', e);
     }
 
-    const accessToken = await decryptToken(data.access_token_enc);
-    const leagues = await yahooListLeagues(accessToken);
-
+    // STAGE E: Success
     return new NextResponse(JSON.stringify({ ok: true, leagues }), {
       status: 200,
       headers: { 'content-type': 'application/json', ...(headers ?? {}) },
     });
-  } catch (err: any) {
-    console.error('leagues_list_error', err);
-    return NextResponse.json(
-      { ok: false, error: err?.message || String(err) },
-      { status: 500 }
-    );
+  } catch (e) {
+    return err('uncaught', e);
   }
 }
 

@@ -25,7 +25,15 @@ export default function Dashboard() {
           if (!json.ok) throw new Error(json.error || "Failed to load leagues");
           setLeagues(Array.isArray(json.leagues) ? json.leagues : []);
         })
-        .catch((e) => setError(e.message));
+        .catch((e) => {
+          // If server sent { ok:false, error:'internal_error:STAGE' }, show that.
+          // Otherwise show a generic message.
+          if (typeof e?.message === "string") {
+            setError(e.message);
+          } else {
+            setError("internal_error:unknown");
+          }
+        });
     }
   }, [provider]);
 
