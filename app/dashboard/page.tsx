@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import SleeperLeagueForm from "./SleeperLeagueForm";
 
 type League = { league_id: string; name: string; season: string };
 
@@ -10,14 +9,16 @@ export default function Dashboard() {
   const [provider, setProvider] = useState<string | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
-    const p = search.get("provider");
-    setProvider(p);
+    setProvider(search.get("provider"));
   }, []);
 
   useEffect(() => {
     if (provider === "yahoo") {
+      setError(null);
+      setLeagues([]);
       fetch("/api/leagues/list?provider=yahoo", { cache: "no-store" })
         .then((r) => r.json())
         .then((json) => {
@@ -55,29 +56,22 @@ export default function Dashboard() {
           </div>
         )}
 
-        <Link
-          href="/"
-          className="rounded-xl px-5 py-3 border hover:bg-gray-50"
-        >
+        <Link href="/" className="rounded-xl px-5 py-3 border hover:bg-gray-50">
           Back to Home
         </Link>
-
-        {provider === "sleeper" && (
-          <div className="card space-y-3">
-            <SleeperLeagueForm />
-          </div>
-        )}
 
         {provider === "yahoo" && (
           <div className="card space-y-3">
             <h2 className="text-xl font-semibold">Choose your Yahoo league</h2>
+
             {error && <p className="text-red-600">Error: {error}</p>}
-            {!error && leagues.length === 0 && <p>No leagues found.</p>}
+
+            {!error && leagues.length === 0 && (
+              <p className="text-gray-600">No leagues found.</p>
+            )}
+
             {leagues.length > 0 && (
-              <select
-                className="rounded-xl px-5 py-3 border w-full"
-                defaultValue=""
-              >
+              <select className="rounded-xl px-5 py-3 border w-full" defaultValue="">
                 <option value="" disabled>
                   Select a league…
                 </option>
@@ -98,3 +92,4 @@ export default function Dashboard() {
     </main>
   );
 }
+
