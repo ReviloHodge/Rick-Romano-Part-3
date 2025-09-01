@@ -93,10 +93,36 @@ export async function listLeagues(accessToken: string) {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   if (!res.ok) throw new Error("yahoo_listLeagues_failed");
-  const data = await res.json();
 
-  // TODO: parse data.fantasy_content safely to extract leagues
-  return data;
+  const data = await res.json();
+  const users = data?.fantasy_content?.users;
+  const userArr = Array.isArray(users) ? users : users?.[0]?.user;
+  // Yahoo often returns: fantasy_content.users[0].user[1].games[0].game[1].leagues
+  const userNode = Array.isArray(userArr) ? userArr : users?.[0]?.user;
+  const gamesNode = userNode?.[1]?.games?.[0]?.game;
+  const game = Array.isArray(gamesNode) ? gamesNode : gamesNode?.[0]?.game;
+
+  const leaguesNode = game?.[1]?.leagues;
+  if (!leaguesNode) return [];
+
+  const leagues: Array<{ league_id: string; name: string; season: string }> = [];
+
+  Object.keys(leaguesNode).forEach((k) => {
+    const entry = leaguesNode[k];
+    const league = entry?.league ?? entry;
+    const leagueKey = league?.league_key ?? league?.[0]?.league_key;
+    const name = league?.name ?? league?.[0]?.name;
+    const season = league?.season ?? league?.[0]?.season;
+    if (leagueKey && name) {
+      leagues.push({
+        league_id: String(leagueKey),
+        name: String(name),
+        season: String(season ?? ''),
+      });
+    }
+  });
+
+  return leagues;
 }
 
 /**
