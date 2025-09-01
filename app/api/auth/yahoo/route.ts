@@ -1,5 +1,5 @@
-// app/api/auth/yahoo/route.ts
 export const runtime = 'nodejs';
+// app/api/auth/yahoo/route.ts
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
