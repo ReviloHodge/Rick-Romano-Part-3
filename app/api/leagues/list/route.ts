@@ -59,9 +59,14 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: { 'content-type': 'application/json', ...(headers ?? {}) },
     });
-  } catch (err: any) {
-    console.error('leagues_list_error', err);
-    return NextResponse.json({ ok: false, error: 'internal_error' }, { status: 500 });
+  } } catch (err: any) {
+  console.error('leagues_list_error', err);
+  return NextResponse.json(
+    { ok: false, error: err?.message || String(err) },
+    { status: 500 }
+  );
+}
+
   }
 }
 
