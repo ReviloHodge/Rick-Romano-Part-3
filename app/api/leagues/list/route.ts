@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 // app/api/leagues/list/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -5,8 +7,6 @@ import { getOrCreateUid } from '../../../../lib/user';
 import { getSupabaseAdmin } from '../../../../lib/db';
 import { decryptToken } from '../../../../lib/security';
 import { listLeagues as yahooListLeagues } from '../../../../lib/providers/yahoo';
-
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
