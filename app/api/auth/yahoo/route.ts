@@ -7,7 +7,7 @@ import { encryptToken } from '../../../../lib/security';
 import { getSupabaseAdmin } from '../../../../lib/db';
 import { track } from '../../../../lib/metrics';
 
-// Ensure Node runtime (some provider helpers may use Buffer/Node APIs)
+// Force Node runtime (Yahoo provider helpers may use Buffer/Node APIs)
 export const runtime = 'nodejs';
 
 /** Build Yahoo OAuth authorize URL */
@@ -16,7 +16,7 @@ function buildAuth(clientId: string, redirectUri: string, state: string) {
   auth.searchParams.set('client_id', clientId);
   auth.searchParams.set('redirect_uri', redirectUri);
   auth.searchParams.set('response_type', 'code');
-  auth.searchParams.set('scope', 'openid fspt-r'); // Fantasy Sports read scope
+  auth.searchParams.set('scope', 'openid fspt-r');
   auth.searchParams.set('language', 'en-us');
   auth.searchParams.set('state', state);
   return auth;
@@ -77,14 +77,12 @@ export async function GET(req: NextRequest) {
             try {
               track?.('oauth_success', uid, { provider: 'yahoo' });
             } catch (e) {
-              // metrics failures should never break auth flow
               console.warn('track(oauth_success) failed:', e);
             }
           }
         }
       } catch (err) {
         console.error('Yahoo oauthExchange failed:', err);
-        // Continue to dashboard; surface an error toast later if desired
       }
 
       return NextResponse.redirect(new URL('/dashboard?provider=yahoo', req.url));
@@ -111,9 +109,13 @@ export async function GET(req: NextRequest) {
       status: 302,
       headers: { Location: auth.toString(), ...(headers ?? {}) },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Yahoo auth route error:', err);
-    return NextResponse.json({ ok: false, error: 'internal_error' }, { status: 500 });
+    // Show the actual error message for debugging
+    return NextResponse.json(
+      { ok: false, error: err?.message || String(err) },
+      { status: 500 }
+    );
   }
 }
 
@@ -143,8 +145,11 @@ export async function POST(req: NextRequest) {
         headers: { 'content-type': 'application/json', ...(headers ?? {}) },
       }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error('Yahoo auth POST error:', err);
-    return NextResponse.json({ ok: false, error: 'internal_error' }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: err?.message || String(err) },
+      { status: 500 }
+    );
   }
 }
