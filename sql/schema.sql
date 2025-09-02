@@ -11,7 +11,7 @@ create table if not exists league_connection(
   access_token_enc text not null,
   refresh_token_enc text,
   expires_at timestamptz,
-  league_id text not null,
+  league_id text,
   team_id text,
   created_at timestamptz default now()
 );
