@@ -58,7 +58,12 @@ export async function GET(req: NextRequest) {
     console.log('[leagues:list] provider=yahoo');
 
     // A) Supabase admin
-    const supabase = getSupabaseAdmin?.();
+    let supabase: ReturnType<typeof getSupabaseAdmin>;
+    try {
+      supabase = getSupabaseAdmin();
+    } catch (err) {
+      return fail('supabase_admin_init', err);
+    }
     if (!supabase) return fail('supabase_admin_missing');
 
     // B) Load token row
