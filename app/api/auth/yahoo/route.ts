@@ -10,6 +10,17 @@ import { getSupabaseAdmin } from '../../../../lib/db';
 import { track } from '../../../../lib/metrics';
 
 
+function parseCookie(cookieHeader: string | null): Record<string, string> {
+  if (!cookieHeader) return {};
+  const out: Record<string, string> = {};
+  cookieHeader.split(';').forEach(part => {
+    const [k, ...rest] = part.trim().split('=');
+    if (!k) return;
+    out[k] = decodeURIComponent(rest.join('=') ?? '');
+  });
+  return out;
+}
+
 /**
  * GET /api/auth/yahoo
  * - Without ?code=: start OAuth (redirect to Yahoo).
@@ -24,6 +35,10 @@ export async function GET(req: NextRequest) {
   // --- Callback branch ---
   if (code) {
     const stateParam = url.searchParams.get('state');
+    const cookies = parseCookie(req.headers.get('cookie'));
+    if (!stateParam || cookies['y_state'] !== stateParam) {
+      return new NextResponse('Invalid state', { status: 400 });
+    }
     const userIdParam = url.searchParams.get('userId');
     const { uid: cookieUid } = getOrCreateUid(req);
     const uid = userIdParam ?? stateParam ?? cookieUid ?? null;
@@ -65,27 +80,50 @@ export async function GET(req: NextRequest) {
     if (errors.length > 0) {
       next.searchParams.set('error', errors.join(','));
     }
-    return NextResponse.redirect(next);
+    const res = NextResponse.redirect(next);
+    res.headers.append('Set-Cookie', 'y_state=; Path=/; Max-Age=0');
+    return res;
   }
 
   // --- Start-auth branch ---
   const userIdParam = url.searchParams.get('userId');
-  const { uid, headers } = getOrCreateUid(req);
+  const { uid } = getOrCreateUid(req);
   const state = userIdParam ?? uid;
 
   const auth = buildAuth(state);
 
+  const uidCookie = [
+    `uid=${encodeURIComponent(uid)}`,
+    'Path=/',
+    'SameSite=Lax',
+    'HttpOnly',
+    'Secure',
+    `Max-Age=${60 * 60 * 24 * 365}`,
+  ].join('; ');
+
+  const stateCookie = [
+    `y_state=${encodeURIComponent(state)}`,
+    'Path=/',
+    'SameSite=Lax',
+    'HttpOnly',
+    'Secure',
+    `Max-Age=${60 * 10}`,
+  ].join('; ');
+
   if (debug) {
+    const headers = new Headers({ 'content-type': 'application/json' });
+    headers.append('Set-Cookie', uidCookie);
+    headers.append('Set-Cookie', stateCookie);
     return new NextResponse(
       JSON.stringify({ ok: true, auth: auth.toString(), state }),
-      { status: 200, headers: { 'content-type': 'application/json', ...(headers ?? {}) } }
+      { status: 200, headers }
     );
   }
 
-  return new NextResponse(null, {
-    status: 302,
-    headers: { Location: auth.toString(), ...(headers ?? {}) },
-  });
+  const headers = new Headers({ Location: auth.toString() });
+  headers.append('Set-Cookie', uidCookie);
+  headers.append('Set-Cookie', stateCookie);
+  return new NextResponse(null, { status: 302, headers });
 }
 
 /**
@@ -93,11 +131,33 @@ export async function GET(req: NextRequest) {
  * Return the built authorize URL as JSON (no redirect).
  */
 export async function POST(req: NextRequest) {
-  const { uid, headers } = getOrCreateUid(req);
+  const { uid } = getOrCreateUid(req);
   const auth = buildAuth(uid);
+
+  const uidCookie = [
+    `uid=${encodeURIComponent(uid)}`,
+    'Path=/',
+    'SameSite=Lax',
+    'HttpOnly',
+    'Secure',
+    `Max-Age=${60 * 60 * 24 * 365}`,
+  ].join('; ');
+
+  const stateCookie = [
+    `y_state=${encodeURIComponent(uid)}`,
+    'Path=/',
+    'SameSite=Lax',
+    'HttpOnly',
+    'Secure',
+    `Max-Age=${60 * 10}`,
+  ].join('; ');
+
+  const headers = new Headers({ 'content-type': 'application/json' });
+  headers.append('Set-Cookie', uidCookie);
+  headers.append('Set-Cookie', stateCookie);
 
   return new NextResponse(
     JSON.stringify({ ok: true, auth: auth.toString(), state: uid }),
-    { status: 200, headers: { 'content-type': 'application/json', ...(headers ?? {}) } }
+    { status: 200, headers }
   );
 }
