@@ -45,6 +45,7 @@ export function buildAuth(state: string) {
   auth.searchParams.set("response_type", "code");
   auth.searchParams.set("scope", "fspt-r");
   auth.searchParams.set("language", "en-us");
+  auth.searchParams.set("duration", "permanent");
   auth.searchParams.set("state", state);
   return auth;
 }
