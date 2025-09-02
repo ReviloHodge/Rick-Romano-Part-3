@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/db';
-import { track } from '@/lib/metrics';
+import { track, flush } from '@/lib/metrics';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       .eq('id', episodeId);
 
     track('episode_rendered', userId, { episode_id: episodeId, duration_s: duration });
+    await flush();
     return NextResponse.json({ ok: true, audio_url: fakeUrl });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });

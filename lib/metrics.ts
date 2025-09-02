@@ -13,3 +13,21 @@ export const track = (
   if (!client) return;
   client.capture({ event, distinctId: distinctId || 'anon', properties });
 };
+
+export const flush = async () => {
+  if (!client) return;
+  await client.flush();
+};
+
+if (client) {
+  const handleExit = async () => {
+    try {
+      await flush();
+    } catch {
+      // ignore flush errors during shutdown
+    }
+  };
+  ['beforeExit', 'SIGINT', 'SIGTERM'].forEach((evt) =>
+    process.once(evt as any, handleExit)
+  );
+}

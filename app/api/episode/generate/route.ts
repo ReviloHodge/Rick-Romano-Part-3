@@ -3,12 +3,13 @@ import { getSupabaseAdmin } from '@/lib/db';
 import { computeFacts } from '@/lib/analysis/compute';
 import { buildScript } from '@/lib/analysis/script';
 import { adaptSnapshot } from '@/lib/migrate';
-import { track } from '@/lib/metrics';
+import { track, flush } from '@/lib/metrics';
 
 export async function POST(req: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const { provider, leagueId, week, userId } = await req.json();
+
     if (!provider || !leagueId || !week) {
       return NextResponse.json({ ok: false, error: 'missing params' }, { status: 400 });
     }
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       .eq('league_id', leagueId)
       .eq('week', week)
       .single();
+
     if (existing) {
       return NextResponse.json({ ok: true, episodeId: existing.id });
     }
@@ -31,12 +33,15 @@ export async function POST(req: NextRequest) {
       .eq('league_id', leagueId)
       .eq('week', week)
       .single();
+
     if (snapErr || !snap) {
       return NextResponse.json({ ok: false, error: 'snapshot_missing' }, { status: 400 });
     }
+
     const snapshot = adaptSnapshot(snap.raw_json);
     const facts = computeFacts(snapshot);
     const script = buildScript({ facts, expert_headlines: [] });
+
     const { data: ep, error: epErr } = await supabaseAdmin
       .from('episode')
       .insert({
@@ -48,10 +53,14 @@ export async function POST(req: NextRequest) {
       })
       .select('id')
       .single();
+
     if (epErr || !ep) {
       return NextResponse.json({ ok: false, error: 'db_error' }, { status: 500 });
     }
+
     track('episode_generated', userId, { episode_id: ep.id });
+    await flush();
+
     return NextResponse.json({ ok: true, episodeId: ep.id });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
