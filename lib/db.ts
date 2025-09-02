@@ -7,9 +7,11 @@ export const getSupabase = (): SupabaseClient => {
   if (!_supabase) {
     const url = process.env.SUPABASE_URL;
     const anon = process.env.SUPABASE_ANON_KEY;
+
     if (!url || !anon) {
-      throw new Error('Missing Supabase client env vars');
+      throw new Error('Missing Supabase client env vars (SUPABASE_URL and/or SUPABASE_ANON_KEY).');
     }
+
     _supabase = createClient(url, anon, { auth: { persistSession: false } });
   }
   return _supabase;
@@ -19,16 +21,27 @@ export const getSupabaseAdmin = (): SupabaseClient => {
   if (!_supabaseAdmin) {
     const url = process.env.SUPABASE_URL;
     const service = process.env.SUPABASE_SERVICE_ROLE;
+
+    // Lightweight diagnostics (safe — doesn’t print secrets)
+    // eslint-disable-next-line no-console
     console.log('[db] creating Supabase admin client', {
       SUPABASE_URL: url ? 'present' : 'missing',
       SUPABASE_SERVICE_ROLE: service ? 'present' : 'missing',
     });
+
     if (!url || !service) {
-      throw new Error('Missing Supabase service env vars');
+      const missing = [
+        !url && 'SUPABASE_URL',
+        !service && 'SUPABASE_SERVICE_ROLE',
+      ].filter(Boolean).join(', ');
+      throw new Error(`Missing Supabase service env vars: ${missing}`);
     }
-    _supabaseAdmin = createClient(url, service, {
-      auth: { persistSession: false },
-    });
+
+    _supabaseAdmin = createClient(url, service, { auth: { persistSession: false } });
+
+    if (typeof (_supabaseAdmin as any).from !== 'function') {
+      throw new Error('Supabase admin client failed to initialize');
+    }
   }
   return _supabaseAdmin;
 };
@@ -38,12 +51,12 @@ export const upsertSnapshot = async (
   provider: string,
   leagueId: string,
   week: number,
-  raw_json: any
+  raw_json: unknown
 ) => {
-  return getSupabaseAdmin().from('league_snapshot').upsert({
-    provider,
-    league_id: leagueId,
-    week,
-    raw_json,
-  });
+  const { data, error } = await getSupabaseAdmin()
+    .from('league_snapshot')
+    .upsert({ provider, league_id: leagueId, week, raw_json });
+
+  if (error) throw error;
+  return data;
 };
