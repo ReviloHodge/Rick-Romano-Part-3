@@ -3,7 +3,7 @@ import { decryptToken } from '@/lib/security';
 import { getSupabaseAdmin, upsertSnapshot } from '@/lib/db';
 import { track, flush } from '@/lib/metrics';
 import { getLeagueWeek as sleeperData } from '@/lib/providers/sleeper';
-import { getLeagueWeekData as yahooData } from '@/lib/providers/yahoo';
+import { getLeagueWeek as yahooData, toSnapshot as yahooToSnapshot } from '@/lib/providers/yahoo';
 import { Provider } from '@/lib/types';
 
 const lastCompletedWeek = (): number => {
@@ -36,7 +36,21 @@ export async function POST(req: NextRequest) {
       provider === 'sleeper'
         ? await sleeperData(leagueId, fetchWeek)
         : await yahooData(access, leagueId, fetchWeek);
-    await upsertSnapshot(provider, leagueId, fetchWeek, snapshot);
+
+    const toStore =
+      provider === 'yahoo'
+        ? yahooToSnapshot(
+            {
+              leagueId,
+              name: snapshot.domain.league.name,
+              season: snapshot.domain.league.season,
+            },
+            fetchWeek,
+            snapshot.raw,
+          )
+        : snapshot;
+
+    await upsertSnapshot(provider, leagueId, fetchWeek, toStore);
     track('snapshot_saved', userId, {
       provider,
       leagueId: leagueId,

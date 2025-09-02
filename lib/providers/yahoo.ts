@@ -1,5 +1,22 @@
 // lib/providers/yahoo.ts
 
+import { safeFetch } from "../http/safeFetch";
+import { ZYahooMatchupWeek } from "../schemas";
+import { z } from "zod";
+import type {
+  LeagueMeta,
+  MatchupWeek,
+  Team,
+  RosterSpot,
+  Matchup,
+} from "../../types/domain";
+import type {
+  Snapshot,
+  Team as SnapshotTeam,
+  Player as SnapshotPlayer,
+  Matchup as SnapshotMatchup,
+} from "../types";
+
 const FANTASY_API = "https://fantasysports.yahooapis.com/fantasy/v2";
 const TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
 
@@ -127,17 +144,218 @@ export async function listLeagues(accessToken: string): Promise<League[]> {
   return leagues;
 }
 
-/** Example raw scoreboard fetch; keep as-is for now. */
-export async function getLeagueWeekData(
+/** Convert Yahoo scoreboard JSON into a Snapshot for analysis. */
+export function toSnapshot(
+  league: { leagueId: string; name: string; season: string | number },
+  week: number,
+  raw: any,
+): Snapshot {
+  const matchupsNode = raw?.fantasy_content?.league?.[1]?.scoreboard?.matchups || [];
+  const matchupArray: any[] = Array.isArray(matchupsNode) ? matchupsNode : [matchupsNode];
+
+  const teamMap = new Map<string, SnapshotTeam>();
+  const matchups: SnapshotMatchup[] = [];
+
+  const parseTeam = (teamWrap: any): SnapshotTeam => {
+    const t = teamWrap?.team || {};
+    const teamId = String(t.team_id || "");
+    const teamName = String(t.name || "");
+    const managerName =
+      t.managers?.[0]?.manager?.nickname || t.managers?.[0]?.manager?.guid || "";
+    const pointsForWeek = parseFloat(t.team_points?.total ?? 0);
+    const players = t.roster?.players || [];
+    const starters: SnapshotPlayer[] = [];
+    const bench: SnapshotPlayer[] = [];
+    players.forEach((p: any) => {
+      const pl = p.player || {};
+      const slot = pl.selected_position || pl.selected_position?.[0]?.position || "BN";
+      const player: SnapshotPlayer = {
+        id: String(pl.player_id || ""),
+        name: pl.name?.full || "",
+        points: parseFloat(
+          pl.total_points ?? pl.points?.total ?? pl.player_points?.total ?? 0,
+        ),
+      };
+      const acq = pl.acquisition_type;
+      if (acq) player.acquisitionType = acq;
+      if (slot === "BN") bench.push(player);
+      else starters.push(player);
+    });
+    const team: SnapshotTeam = {
+      teamId,
+      managerName,
+      teamName,
+      pointsForWeek,
+      pointsSeason: pointsForWeek,
+      starters,
+      bench,
+    };
+    teamMap.set(teamId, team);
+    return team;
+  };
+
+  matchupArray.forEach((m: any) => {
+    const teams = m?.matchup?.teams || [];
+    const [homeWrap, awayWrap] = Array.isArray(teams) ? teams : [teams];
+    const homeTeam = parseTeam(homeWrap);
+    const awayTeam = parseTeam(awayWrap);
+    matchups.push({
+      home: homeTeam.teamId,
+      away: awayTeam.teamId,
+      homeScore: homeTeam.pointsForWeek,
+      awayScore: awayTeam.pointsForWeek,
+    });
+  });
+
+  return {
+    week,
+    leagueName: league.name,
+    teams: Array.from(teamMap.values()),
+    matchups,
+    transactions: { waivers: [], trades: [], injuries: [] },
+  };
+}
+
+/** Convert raw Yahoo scoreboard into MatchupWeek domain shape. */
+export function toDomain(
+  league: LeagueMeta,
+  week: number,
+  raw: any,
+): MatchupWeek {
+  const teamMap = new Map<string, Team>();
+  const matchups: Matchup[] = [];
+
+  const matchupsNode = raw?.fantasy_content?.league?.[1]?.scoreboard?.matchups || [];
+  const matchupArray: any[] = Array.isArray(matchupsNode) ? matchupsNode : [matchupsNode];
+
+  const parseTeam = (teamWrap: any) => {
+    const t = teamWrap?.team || {};
+    const teamId = String(t.team_id || "");
+    const displayName = String(t.name || "");
+    const ownerUserId =
+      t.managers?.[0]?.manager?.guid || t.managers?.[0]?.manager?.nickname || teamId;
+    const points = parseFloat(t.team_points?.total ?? 0);
+    const players = t.roster?.players || [];
+    const roster: RosterSpot[] = players.map((p: any) => {
+      const pl = p.player || {};
+      return {
+        slot: pl.selected_position || pl.selected_position?.[0]?.position || "BN",
+        playerId: String(pl.player_id || ""),
+        points: parseFloat(
+          pl.total_points ?? pl.points?.total ?? pl.player_points?.total ?? 0,
+        ),
+      };
+    });
+    const team: Team = { teamId, displayName, ownerUserId };
+    teamMap.set(teamId, team);
+    return { team, points, roster };
+  };
+
+  matchupArray.forEach((m: any) => {
+    const teams = m?.matchup?.teams || [];
+    const [homeWrap, awayWrap] = Array.isArray(teams) ? teams : [teams];
+    const home = parseTeam(homeWrap);
+    const away = parseTeam(awayWrap);
+    const winner: "home" | "away" | "tie" =
+      home.points > away.points
+        ? "home"
+        : away.points > home.points
+        ? "away"
+        : "tie";
+    const margin = Math.abs(home.points - away.points);
+    matchups.push({
+      id: `${home.team.teamId}-${away.team.teamId}-${week}`,
+      week,
+      homeTeamId: home.team.teamId,
+      awayTeamId: away.team.teamId,
+      homePoints: home.points,
+      awayPoints: away.points,
+      homeRoster: home.roster,
+      awayRoster: away.roster,
+      winner,
+      margin,
+    });
+  });
+
+  let topScorerTeamId = "";
+  let topScorerPoints = -1;
+  matchups.forEach((m) => {
+    if (m.homePoints > topScorerPoints) {
+      topScorerPoints = m.homePoints;
+      topScorerTeamId = m.homeTeamId;
+    }
+    if (m.awayPoints > topScorerPoints) {
+      topScorerPoints = m.awayPoints;
+      topScorerTeamId = m.awayTeamId;
+    }
+  });
+
+  let biggestBlowoutGameId: string | null = null;
+  let closestGameId: string | null = null;
+  let maxMargin = -1;
+  let minMargin = Number.MAX_SAFE_INTEGER;
+  matchups.forEach((m) => {
+    if (m.margin > maxMargin) {
+      maxMargin = m.margin;
+      biggestBlowoutGameId = m.id;
+    }
+    if (m.margin < minMargin) {
+      minMargin = m.margin;
+      closestGameId = m.id;
+    }
+  });
+
+  const summary = {
+    topScorerTeamId,
+    topScorerPoints,
+    biggestBlowoutGameId,
+    closestGameId,
+  };
+
+  const domain: MatchupWeek = {
+    platform: "yahoo",
+    league,
+    generatedAt: new Date().toISOString(),
+    week,
+    teams: Array.from(teamMap.values()),
+    matchups,
+    summary,
+    weeklyAwards: [
+      {
+        key: "top_scorer",
+        label: "Top Scorer",
+        teamId: topScorerTeamId,
+        value: topScorerPoints,
+      },
+    ],
+  };
+  ZYahooMatchupWeek.parse(domain); // ensure structure
+  return domain;
+}
+
+/** Fetch Yahoo scoreboard and return both raw and domain data */
+export async function getLeagueWeek(
   accessToken: string,
   leagueId: string,
-  week: number
+  week: number,
 ) {
-  const res = await fetch(
-    `${FANTASY_API}/league/${leagueId}/scoreboard;week=${week}?format=json`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+  const raw = await safeFetch<any>(
+    `${FANTASY_API}/league/${leagueId}/scoreboard;week=${week};players?format=json`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) throw new Error("yahoo_getLeagueWeekData_failed");
-  return res.json();
+
+  const leagueMetaNode = raw?.fantasy_content?.league?.[0] || {};
+  const league: LeagueMeta = {
+    platform: "yahoo",
+    leagueId,
+    season: z.coerce.number().catch(0).parse(leagueMetaNode?.season ?? 0),
+    name: String(leagueMetaNode?.name || ""),
+  };
+
+  const domain = toDomain(league, week, raw);
+  return { raw, domain };
 }
+
+// Backwards-compatible export
+export const getLeagueWeekData = getLeagueWeek;
 
