@@ -14,10 +14,7 @@ function Spinner({ label }: { label: string }) {
       aria-label={label}
       className="flex items-center justify-center"
     >
-      <svg
-        className="animate-spin h-5 w-5 text-gray-500"
-        viewBox="0 0 24 24"
-      >
+      <svg className="animate-spin h-5 w-5 text-gray-500" viewBox="0 0 24 24">
         <circle
           className="opacity-25"
           cx="12"
@@ -40,57 +37,93 @@ function Spinner({ label }: { label: string }) {
 
 export default function Dashboard() {
   const router = useRouter();
+
+  // Provider / data
   const [provider, setProvider] = useState<string | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
+
+  // Errors
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Loading / selection / status
   const [loadingLeagues, setLoadingLeagues] = useState(false);
   const [loadingEpisode, setLoadingEpisode] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState("");
   const [status, setStatus] = useState("");
 
+  // Map Yahoo OAuth error codes from callback to user-friendly text
+  function mapAuthError(code: string) {
+    switch (code) {
+      case "oauth_exchange":
+        return "Yahoo authentication failed. Please try again.";
+      case "db_upsert":
+        return "Could not save Yahoo connection. Please try again.";
+      case "no_uid":
+        return "Missing user session. Please try again.";
+      default:
+        return "Unexpected error. Please try again.";
+    }
+  }
+
+  // Read provider + auth error from URL
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
-    setProvider(search.get("provider"));
+    const p = search.get("provider");
+    const err = search.get("error");
+
+    setProvider(p);
+
+    if (err) {
+      const msg = err
+        .split(",")
+        .map((c) => mapAuthError(c))
+        .join(" ");
+      setAuthError(msg);
+    } else {
+      setAuthError(null);
+    }
   }, []);
 
+  // Fetch leagues when Yahoo is connected
   useEffect(() => {
-    if (provider === "yahoo") {
-      setError(null);
-      setLeagues([]);
-      setLoadingLeagues(true);
-      setStatus("Loading leagues...");
+    if (provider !== "yahoo") return;
 
-      fetch("/api/leagues/list?provider=yahoo", { cache: "no-store" })
-        .then((r) => r.json())
-        .then((json) => {
-          if (!json.ok) throw new Error(json.error || "Failed to load leagues");
+    setError(null);
+    setLeagues([]);
+    setLoadingLeagues(true);
+    setStatus("Loading leagues...");
 
-          const raw = Array.isArray(json.leagues) ? json.leagues : [];
+    fetch("/api/leagues/list?provider=yahoo", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (!json.ok) throw new Error(json.error || "Failed to load leagues");
 
-          // Normalize snake_case → camelCase for UI
-          const normalized: League[] = raw.map((l: any) => ({
-            leagueId:
-              l.leagueId ??
-              l.league_id ??
-              (l.id != null ? String(l.id) : ""),
-            name: l.name ?? "",
-            season: l.season ?? l.year ?? "",
-          }));
+        const raw = Array.isArray(json.leagues) ? json.leagues : [];
 
-          setLeagues(normalized);
-        })
-        .catch((e) => {
-          if (typeof e?.message === "string") {
-            setError(e.message);
-          } else {
-            setError("internal_error:unknown");
-          }
-        })
-        .finally(() => {
-          setLoadingLeagues(false);
-          setStatus("");
-        });
-    }
+        // Normalize snake_case → camelCase for UI
+        const normalized: League[] = raw.map((l: any) => ({
+          leagueId:
+            l.leagueId ??
+            l.league_id ??
+            (l.id != null ? String(l.id) : ""),
+          name: l.name ?? "",
+          season: l.season ?? l.year ?? "",
+        }));
+
+        setLeagues(normalized);
+      })
+      .catch((e) => {
+        if (typeof e?.message === "string") {
+          setError(e.message);
+        } else {
+          setError("internal_error:unknown");
+        }
+      })
+      .finally(() => {
+        setLoadingLeagues(false);
+        setStatus("");
+      });
   }, [provider]);
 
   const handleYahoo = useYahooAuth();
@@ -103,7 +136,11 @@ export default function Dashboard() {
       const snapshotRes = await fetch("/api/snapshot/fetch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "yahoo", leagueId: selectedLeague, week: undefined }),
+        body: JSON.stringify({
+          provider: "yahoo",
+          leagueId: selectedLeague,
+          week: undefined,
+        }),
       });
       const { week } = await snapshotRes.json();
 
@@ -142,7 +179,10 @@ export default function Dashboard() {
         <div aria-live="polite" className="sr-only">
           {status}
         </div>
+
         <h1 className="text-3xl font-extrabold">Dashboard</h1>
+
+        {authError && <p className="text-red-600">{authError}</p>}
 
         {provider ? (
           <p>Provider connected: {provider}</p>
