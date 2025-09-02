@@ -52,6 +52,9 @@ export default function Dashboard() {
   const [selectedLeague, setSelectedLeague] = useState("");
   const [status, setStatus] = useState("");
 
+  // Optional week selector ("" = auto/current)
+  const [week, setWeek] = useState<string>("");
+
   // Map Yahoo OAuth error codes from callback to user-friendly text
   function mapAuthError(code: string) {
     switch (code) {
@@ -130,43 +133,77 @@ export default function Dashboard() {
 
   async function onGenerate() {
     if (!selectedLeague) return;
+
+    // stable user id for backend correlation
+    const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
+    localStorage.setItem("uid", uid);
+
     setLoadingEpisode(true);
     setStatus("Generating episode...");
     try {
+      // If user selected a week, send it; otherwise let backend pick (undefined).
+      const requestedWeek =
+        week && !Number.isNaN(Number(week)) ? Number(week) : undefined;
+
+      setStatus("Fetching league snapshot...");
       const snapshotRes = await fetch("/api/snapshot/fetch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider: "yahoo",
           leagueId: selectedLeague,
-          week: undefined,
+          week: requestedWeek,
+          userId: uid,
         }),
       });
-      const { week } = await snapshotRes.json();
+      const snapshotJson = await snapshotRes.json();
+      if (!snapshotRes.ok || snapshotJson?.ok === false) {
+        throw new Error(snapshotJson?.error || "Failed to fetch snapshot");
+      }
 
+      const effectiveWeek =
+        requestedWeek ?? snapshotJson.week ?? undefined;
+
+      setStatus("Generating episode...");
       const episodeRes = await fetch("/api/episode/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "yahoo", leagueId: selectedLeague, week }),
+        body: JSON.stringify({
+          provider: "yahoo",
+          leagueId: selectedLeague,
+          week: effectiveWeek,
+          userId: uid,
+        }),
       });
-      const { episodeId } = await episodeRes.json();
+      const { episodeId, error: epError } = await episodeRes.json();
+      if (!episodeRes.ok || !episodeId) {
+        throw new Error(epError || "Failed to generate episode");
+      }
 
-      await fetch("/api/episode/render", {
+      setStatus("Rendering episode...");
+      const renderRes = await fetch("/api/episode/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ episodeId }),
       });
+      const renderJson = await renderRes.json();
+      if (!renderRes.ok || renderJson?.ok === false) {
+        throw new Error(renderJson?.error || "Failed to render episode");
+      }
 
+      setStatus("Episode ready! Redirecting...");
       router.push(`/e/${episodeId}`);
     } catch (e: any) {
       if (typeof e?.message === "string") {
         setError(e.message);
+        setStatus(`Error: ${e.message}`);
       } else {
         setError("internal_error:unknown");
+        setStatus("Error: internal_error:unknown");
       }
     } finally {
       setLoadingEpisode(false);
-      setStatus("");
+      // Keep status text for screen readers; it will clear on next interaction.
     }
   }
 
@@ -233,6 +270,22 @@ export default function Dashboard() {
                     </option>
                   ))}
                 </select>
+
+                {/* Optional week selector ("" = auto/current) */}
+                <select
+                  className="rounded-xl px-5 py-3 border w-full"
+                  value={week}
+                  onChange={(e) => setWeek(e.target.value)}
+                  disabled={loadingEpisode}
+                >
+                  <option value="">Auto-select current week</option>
+                  {Array.from({ length: 18 }, (_, i) => i + 1).map((w) => (
+                    <option key={w} value={String(w)}>
+                      Week {w}
+                    </option>
+                  ))}
+                </select>
+
                 <button
                   onClick={onGenerate}
                   className="btn w-full"
@@ -248,6 +301,8 @@ export default function Dashboard() {
                     "Generate Episode"
                   )}
                 </button>
+
+                {status && <p className="text-sm text-gray-600">{status}</p>}
               </>
             )}
           </div>
