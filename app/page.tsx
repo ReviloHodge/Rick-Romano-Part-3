@@ -1,11 +1,9 @@
 "use client";
 
+import { useYahooAuth } from "./hooks/useYahooAuth";
+
 export default function Home() {
-  const handleYahoo = () => {
-    const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
-    localStorage.setItem("uid", uid);
-    window.location.href = `/api/auth/yahoo?userId=${encodeURIComponent(uid)}`;
-  };
+  const handleYahoo = useYahooAuth();
 
   return (
     <main className="min-h-screen flex flex-col">

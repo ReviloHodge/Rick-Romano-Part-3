@@ -24,7 +24,7 @@ export async function getLeaguesForUser(
 ): Promise<LeagueMeta[]> {
   const json = await safeFetch(`${API}/user/${userId}/leagues/nfl/${season}`);
   const leagues = z.array(ZSleeperLeague).parse(json);
-  return leagues.map((l) => ({
+  return leagues.map((l: z.infer<typeof ZSleeperLeague>) => ({
     platform: "sleeper" as const,
     leagueId: l.league_id,
     season: l.season,
@@ -107,7 +107,7 @@ export function toDomain(
 
   // Group matchups by matchup_id
   const grouped: Record<number, z.infer<typeof ZSleeperMatchup>[]> = {};
-  raw.matchups.forEach((m) => {
+  raw.matchups.forEach((m: z.infer<typeof ZSleeperMatchup>) => {
     if (!grouped[m.matchup_id]) grouped[m.matchup_id] = [];
     grouped[m.matchup_id].push(m);
   });
@@ -120,14 +120,14 @@ export function toDomain(
     const awayTeamId = String(away.roster_id);
 
     const buildRoster = (m: z.infer<typeof ZSleeperMatchup>): RosterSpot[] => {
-      const starters = m.starters.map((p) => ({
+      const starters = m.starters.map((p: string) => ({
         slot: "FLEX",
         playerId: p,
         points: m.players_points[p] ?? 0,
       }));
       const benchPlayers = m.players
-        .filter((p) => !m.starters.includes(p))
-        .map((p) => ({ slot: "BN", playerId: p, points: m.players_points[p] ?? 0 }));
+        .filter((p: string) => !m.starters.includes(p))
+        .map((p: string) => ({ slot: "BN", playerId: p, points: m.players_points[p] ?? 0 }));
       return [...starters, ...benchPlayers];
     };
 
