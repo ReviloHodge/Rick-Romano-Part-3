@@ -1,6 +1,6 @@
 // lib/providers/yahoo.ts
 
-import { safeFetch } from "../http/safeFetch";
+import { safeFetch, FetchError } from "../http/safeFetch";
 import { ZYahooMatchupWeek } from "../schemas";
 import { z } from "zod";
 import { validateEnv, YAHOO_ENV_VARS } from "../validateEnv";
@@ -114,13 +114,16 @@ export async function refreshToken(refresh_token: string): Promise<YahooTokenRes
  * We aggressively guard every nested access Yahoo returns.
  */
 export async function listLeagues(accessToken: string): Promise<League[]> {
-  const res = await fetch(
-    `${FANTASY_API}/users;use_login=1/games;game_keys=nfl/leagues?format=json`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  if (!res.ok) throw new Error("yahoo_listLeagues_failed");
-
-  const data = await res.json();
+  let data: any;
+  try {
+    data = await safeFetch<any>(
+      `${FANTASY_API}/users;use_login=1/games;game_keys=nfl/leagues?format=json`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+  } catch (err) {
+    if (err instanceof FetchError) throw err;
+    throw new Error("yahoo_listLeagues_failed");
+  }
 
   // Yahoo structure: fantasy_content -> users[0].user[1].games[0].game[*].[1].leagues[0].league[*].[0]
   const users = data?.fantasy_content?.users;
