@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { decryptToken } from '@/lib/security';
+import { decryptToken, encryptToken } from '@/lib/security';
 import { getSupabaseAdmin, upsertSnapshot } from '@/lib/db';
 import { track, flush } from '@/lib/metrics';
 import { getLeagueWeek as sleeperData } from '@/lib/providers/sleeper';
-import { getLeagueWeek as yahooData, toSnapshot as yahooToSnapshot } from '@/lib/providers/yahoo';
+import {
+  getLeagueWeek as yahooData,
+  toSnapshot as yahooToSnapshot,
+  refreshToken as yahooRefresh,
+} from '@/lib/providers/yahoo';
 import { Provider } from '@/lib/types';
+import { FetchError } from '@/lib/http/safeFetch';
 
 export const runtime = 'nodejs';
 
@@ -39,44 +44,132 @@ export async function POST(req: NextRequest) {
     }
     const fetchWeek = week || lastCompletedWeek();
 
-    let data: { access_token_enc: string } | null = null;
-    try {
-      const result = await supabaseAdmin
-        .from('league_connection')
-        .select('access_token_enc')
-        .eq('provider', provider)
-        .eq('league_id', leagueId)
-        .single();
-      data = result.data;
-      if (result.error || !data) {
-        return NextResponse.json({ ok: false, error: 'no_token' }, { status: 400 });
-      }
-    } catch (dbErr) {
-      console.error('[snapshot:fetch] supabase lookup failed', {
-        provider,
-        leagueId,
-        env: envStatus,
-        error: dbErr,
-      });
-      return NextResponse.json({ ok: false, error: 'supabase_lookup_failed' }, { status: 500 });
-    }
+    let access: string | undefined;
+    let refresh: string | null = null;
 
-    const access = await decryptToken(data.access_token_enc);
+    if (provider === 'yahoo') {
+      let data:
+        | { access_token_enc: string; refresh_token_enc?: string; expires_at?: string }
+        | null = null;
+      try {
+        const result = await supabaseAdmin
+          .from('league_connection')
+          .select('access_token_enc, refresh_token_enc, expires_at')
+          .eq('provider', provider)
+          .eq('league_id', leagueId)
+          .single();
+        data = result.data;
+        if (result.error || !data) {
+          return NextResponse.json({ ok: false, error: 'no_token' }, { status: 400 });
+        }
+      } catch (dbErr) {
+        console.error('[snapshot:fetch] supabase lookup failed', {
+          provider,
+          leagueId,
+          env: envStatus,
+          error: dbErr,
+        });
+        return NextResponse.json({ ok: false, error: 'supabase_lookup_failed' }, { status: 500 });
+      }
+
+      access = await decryptToken(data.access_token_enc);
+      refresh = data.refresh_token_enc
+        ? await decryptToken(data.refresh_token_enc)
+        : null;
+
+      const expired = data.expires_at
+        ? new Date(data.expires_at).getTime() <= Date.now()
+        : false;
+      if (expired && refresh) {
+        try {
+          const fresh = await yahooRefresh(refresh);
+          access = fresh.access_token;
+          if (fresh.refresh_token) refresh = fresh.refresh_token;
+          const updates: Record<string, any> = {
+            access_token_enc: await encryptToken(access),
+            expires_at: fresh.expires_in
+              ? new Date(Date.now() + fresh.expires_in * 1000).toISOString()
+              : null,
+          };
+          if (fresh.refresh_token) {
+            updates.refresh_token_enc = await encryptToken(fresh.refresh_token);
+          }
+          await supabaseAdmin
+            .from('league_connection')
+            .update(updates)
+            .eq('provider', 'yahoo')
+            .eq('league_id', leagueId);
+        } catch (e) {
+          console.error('[snapshot:fetch] token refresh failed', {
+            provider,
+            leagueId,
+            env: envStatus,
+            error: e,
+          });
+          return NextResponse.json(
+            { ok: false, error: 'token_refresh_failed' },
+            { status: 401 },
+          );
+        }
+      }
+    }
 
     let snapshot: any;
     try {
       snapshot =
         provider === 'sleeper'
           ? await sleeperData(leagueId, fetchWeek)
-          : await yahooData(access, leagueId, fetchWeek);
+          : await yahooData(access!, leagueId, fetchWeek);
     } catch (snapErr) {
-      console.error('[snapshot:fetch] provider fetch failed', {
-        provider,
-        leagueId,
-        env: envStatus,
-        error: snapErr,
-      });
-      return NextResponse.json({ ok: false, error: 'snapshot_fetch_failed' }, { status: 500 });
+      if (
+        provider === 'yahoo' &&
+        snapErr instanceof FetchError &&
+        snapErr.status === 401 &&
+        refresh
+      ) {
+        try {
+          const fresh = await yahooRefresh(refresh);
+          access = fresh.access_token;
+          if (fresh.refresh_token) refresh = fresh.refresh_token;
+          const updates: Record<string, any> = {
+            access_token_enc: await encryptToken(access),
+            expires_at: fresh.expires_in
+              ? new Date(Date.now() + fresh.expires_in * 1000).toISOString()
+              : null,
+          };
+          if (fresh.refresh_token) {
+            updates.refresh_token_enc = await encryptToken(fresh.refresh_token);
+          }
+          await supabaseAdmin
+            .from('league_connection')
+            .update(updates)
+            .eq('provider', 'yahoo')
+            .eq('league_id', leagueId);
+          snapshot = await yahooData(access, leagueId, fetchWeek);
+        } catch (e) {
+          console.error('[snapshot:fetch] provider fetch failed', {
+            provider,
+            leagueId,
+            env: envStatus,
+            error: e,
+          });
+          return NextResponse.json(
+            { ok: false, error: 'snapshot_fetch_failed' },
+            { status: 500 },
+          );
+        }
+      } else {
+        console.error('[snapshot:fetch] provider fetch failed', {
+          provider,
+          leagueId,
+          env: envStatus,
+          error: snapErr,
+        });
+        return NextResponse.json(
+          { ok: false, error: 'snapshot_fetch_failed' },
+          { status: 500 },
+        );
+      }
     }
 
     const toStore =
