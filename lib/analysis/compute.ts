@@ -62,6 +62,7 @@ export function computeFacts(snapshot: Snapshot): Facts {
     week: snapshot.week,
     leagueName: snapshot.leagueName,
     teams: snapshot.teams,
+    weeklyAwards: [],
     topScorer: { team: topTeam },
     upset,
     narrowLoss,

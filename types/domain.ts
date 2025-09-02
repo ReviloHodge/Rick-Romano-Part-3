@@ -1,12 +1,12 @@
 export type LeagueMeta = {
-  platform: "sleeper";
+  platform: "sleeper" | "yahoo";
   leagueId: string;
   season: number;
   name: string;
 };
 
 export type UserHandle = {
-  platform: "sleeper";
+  platform: "sleeper" | "yahoo";
   username: string;
 };
 
@@ -36,7 +36,7 @@ export type Matchup = {
 };
 
 export type MatchupWeek = {
-  platform: "sleeper";
+  platform: "sleeper" | "yahoo";
   league: LeagueMeta;
   generatedAt: string;
   week: number;
