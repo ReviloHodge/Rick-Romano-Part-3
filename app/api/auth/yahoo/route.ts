@@ -13,6 +13,7 @@ import { validateEnv, YAHOO_ENV_VARS } from '../../../../lib/validateEnv';
 validateEnv(YAHOO_ENV_VARS);
 
 const clientId = process.env.YAHOO_CLIENT_ID!;
+// Redirect URI should be https://<your-domain>/api/auth/yahoo (no /callback)
 const redirectUri = process.env.YAHOO_REDIRECT_URI!;
 
 /**
