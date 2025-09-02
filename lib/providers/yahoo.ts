@@ -3,6 +3,7 @@
 import { safeFetch } from "../http/safeFetch";
 import { ZYahooMatchupWeek } from "../schemas";
 import { z } from "zod";
+import { validateEnv, YAHOO_ENV_VARS } from "../validateEnv";
 import type {
   LeagueMeta,
   MatchupWeek,
@@ -17,8 +18,13 @@ import type {
   Matchup as SnapshotMatchup,
 } from "../types";
 
+validateEnv(YAHOO_ENV_VARS);
+
 const FANTASY_API = "https://fantasysports.yahooapis.com/fantasy/v2";
 const TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
+const clientId = process.env.YAHOO_CLIENT_ID!;
+const clientSecret = process.env.YAHOO_CLIENT_SECRET!;
+const redirectUri = process.env.YAHOO_REDIRECT_URI!;
 
 export interface YahooTokenResponse {
   access_token: string;
@@ -32,13 +38,6 @@ export type League = { leagueId: string; name: string; season: string };
 
 /** Exchange an authorization code for tokens. */
 export async function oauthExchange(code: string): Promise<YahooTokenResponse> {
-  const clientId = process.env.YAHOO_CLIENT_ID;
-  const clientSecret = process.env.YAHOO_CLIENT_SECRET;
-  const redirectUri = process.env.YAHOO_REDIRECT_URI;
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error("Missing Yahoo OAuth env vars");
-  }
-
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch(TOKEN_URL, {
@@ -85,13 +84,6 @@ export async function oauthExchange(code: string): Promise<YahooTokenResponse> {
 
 /** Refresh an access token using a refresh_token. */
 export async function refreshToken(refresh_token: string): Promise<YahooTokenResponse> {
-  const clientId = process.env.YAHOO_CLIENT_ID;
-  const clientSecret = process.env.YAHOO_CLIENT_SECRET;
-  const redirectUri = process.env.YAHOO_REDIRECT_URI;
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error("Missing Yahoo OAuth env vars");
-  }
-
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch(TOKEN_URL, {

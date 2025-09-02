@@ -1,16 +1,16 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { validateEnv, SUPABASE_ENV_VARS } from './validateEnv';
+
+validateEnv(SUPABASE_ENV_VARS);
 
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
 export const getSupabase = (): SupabaseClient => {
   if (!_supabase) {
-    const url = process.env.SUPABASE_URL;
-    const anon = process.env.SUPABASE_ANON_KEY;
-
-    if (!url || !anon) {
-      throw new Error('Missing Supabase client env vars (SUPABASE_URL and/or SUPABASE_ANON_KEY).');
-    }
+    // validateEnv guarantees presence; use type assertion (avoids non-null '!')
+    const url = process.env.SUPABASE_URL as string;
+    const anon = process.env.SUPABASE_ANON_KEY as string;
 
     _supabase = createClient(url, anon, { auth: { persistSession: false } });
   }
@@ -19,21 +19,24 @@ export const getSupabase = (): SupabaseClient => {
 
 export const getSupabaseAdmin = (): SupabaseClient => {
   if (!_supabaseAdmin) {
-    const url = process.env.SUPABASE_URL;
-    const service = process.env.SUPABASE_SERVICE_ROLE;
+    // validateEnv guarantees presence; still add lightweight diagnostics
+    const url = process.env.SUPABASE_URL as string;
+    const service = process.env.SUPABASE_SERVICE_ROLE as string;
 
-    // Lightweight diagnostics (safe — doesn’t print secrets)
     // eslint-disable-next-line no-console
     console.log('[db] creating Supabase admin client', {
       SUPABASE_URL: url ? 'present' : 'missing',
       SUPABASE_SERVICE_ROLE: service ? 'present' : 'missing',
     });
 
+    // In case SUPABASE_ENV_VARS ever drifts, keep a defensive check
     if (!url || !service) {
       const missing = [
         !url && 'SUPABASE_URL',
         !service && 'SUPABASE_SERVICE_ROLE',
-      ].filter(Boolean).join(', ');
+      ]
+        .filter(Boolean)
+        .join(', ');
       throw new Error(`Missing Supabase service env vars: ${missing}`);
     }
 
