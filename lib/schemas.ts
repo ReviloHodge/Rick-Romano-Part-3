@@ -88,9 +88,47 @@ export const ZMatchupWeek = z
   })
   .strict();
 
+export const ZYahooMatchupWeek = z
+  .object({
+    platform: z.literal("yahoo"),
+    league: z.object({
+      platform: z.literal("yahoo"),
+      leagueId: z.string(),
+      season: z.number(),
+      name: z.string(),
+    }),
+    generatedAt: z.string(),
+    week: z.number(),
+    teams: z.array(
+      z.object({
+        teamId: z.string(),
+        displayName: z.string(),
+        ownerUserId: z.string(),
+      }),
+    ),
+    matchups: z.array(ZMatchup),
+    summary: z.object({
+      topScorerTeamId: z.string(),
+      topScorerPoints: z.number(),
+      biggestBlowoutGameId: z.string().nullable(),
+      closestGameId: z.string().nullable(),
+    }),
+    weeklyAwards: z.array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        teamId: z.string().optional(),
+        value: z.number().optional(),
+        meta: z.record(z.unknown()).optional(),
+      }),
+    ),
+  })
+  .strict();
+
 export type SleeperUser = z.infer<typeof ZSleeperUser>;
 export type SleeperLeague = z.infer<typeof ZSleeperLeague>;
 export type SleeperMatchup = z.infer<typeof ZSleeperMatchup>;
 export type SleeperRoster = z.infer<typeof ZSleeperRoster>;
 export type SleeperUserMap = z.infer<typeof ZSleeperUserMap>;
 export type MatchupWeekSchema = z.infer<typeof ZMatchupWeek>;
+export type YahooMatchupWeekSchema = z.infer<typeof ZYahooMatchupWeek>;
