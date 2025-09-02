@@ -18,13 +18,19 @@ export const getSupabase = (): SupabaseClient => {
 export const getSupabaseAdmin = (): SupabaseClient => {
   if (!_supabaseAdmin) {
     const url = process.env.SUPABASE_URL;
+    if (!url) {
+      throw new Error('Missing SUPABASE_URL environment variable');
+    }
     const service = process.env.SUPABASE_SERVICE_ROLE;
-    if (!url || !service) {
-      throw new Error('Missing Supabase service env vars');
+    if (!service) {
+      throw new Error('Missing SUPABASE_SERVICE_ROLE environment variable');
     }
     _supabaseAdmin = createClient(url, service, {
       auth: { persistSession: false },
     });
+    if (typeof _supabaseAdmin.from !== 'function') {
+      throw new Error('Supabase admin client failed to initialize');
+    }
   }
   return _supabaseAdmin;
 };
