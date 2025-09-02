@@ -1,12 +1,42 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useYahooAuth } from "./hooks/useYahooAuth";
+
+function mapAuthError(code: string) {
+  switch (code) {
+    case "oauth_exchange":
+      return "Yahoo authentication failed. Please try again.";
+    case "db_upsert":
+      return "Could not save Yahoo connection. Please try again.";
+    case "no_uid":
+      return "Missing user session. Please try again.";
+    default:
+      return "Unexpected error. Please try again.";
+  }
+}
 
 export default function Home() {
   const handleYahoo = useYahooAuth();
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    const err = search.get("error");
+    if (err) {
+      const msg = err
+        .split(",")
+        .map((c) => mapAuthError(c))
+        .join(" ");
+      setAuthError(msg);
+    }
+  }, []);
 
   return (
     <main className="min-h-screen flex flex-col">
+      {authError && (
+        <p className="bg-red-50 text-red-600 text-center py-2">{authError}</p>
+      )}
       {/* Hero */}
       <section className="flex-1 flex items-center justify-center px-6 py-16 text-center">
         <div className="container space-y-6">

@@ -10,10 +10,32 @@ export default function Dashboard() {
   const [provider, setProvider] = useState<string | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  function mapAuthError(code: string) {
+    switch (code) {
+      case "oauth_exchange":
+        return "Yahoo authentication failed. Please try again.";
+      case "db_upsert":
+        return "Could not save Yahoo connection. Please try again.";
+      case "no_uid":
+        return "Missing user session. Please try again.";
+      default:
+        return "Unexpected error. Please try again.";
+    }
+  }
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
     setProvider(search.get("provider"));
+    const err = search.get("error");
+    if (err) {
+      const msg = err
+        .split(",")
+        .map((c) => mapAuthError(c))
+        .join(" ");
+      setAuthError(msg);
+    }
   }, []);
 
   useEffect(() => {
@@ -56,6 +78,7 @@ export default function Dashboard() {
     <main className="min-h-screen px-6 py-16">
       <div className="container space-y-6">
         <h1 className="text-3xl font-extrabold">Dashboard</h1>
+        {authError && <p className="text-red-600">{authError}</p>}
 
         {provider ? (
           <p>Provider connected: {provider}</p>
