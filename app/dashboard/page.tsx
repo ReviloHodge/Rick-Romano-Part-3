@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useYahooAuth } from "../hooks/useYahooAuth";
+import { useSleeperAuth } from "../hooks/useSleeperAuth";
 
 type League = { leagueId: string; name: string; season: string };
 
@@ -133,6 +134,7 @@ export default function Dashboard() {
   }, [provider]);
 
   const handleYahoo = useYahooAuth();
+  const handleSleeper = useSleeperAuth();
 
   async function runEpisodeFlow(
     provider: string,
@@ -186,11 +188,9 @@ export default function Dashboard() {
   async function onGenerate() {
     if (!selectedLeague) return;
 
-    // stable user id for backend correlation
     const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
     localStorage.setItem("uid", uid);
 
-    // lightweight metric
     fetch("/api/metrics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -219,7 +219,6 @@ export default function Dashboard() {
       }
     } finally {
       setLoadingEpisode(false);
-      // Keep status text for screen readers; it will clear on next interaction.
     }
   }
 
@@ -279,10 +278,33 @@ export default function Dashboard() {
           <p>Provider connected: {provider}</p>
         ) : (
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="/dashboard?provider=sleeper" className="btn">
+            <button
+              type="button"
+              onClick={() => {
+                setProvider("sleeper");
+                try {
+                  handleSleeper();
+                } catch {}
+              }}
+              className="btn"
+              disabled={loadingLeagues || loadingEpisode}
+              aria-disabled={loadingLeagues || loadingEpisode}
+            >
               Connect Sleeper
-            </a>
-            <button onClick={handleYahoo} className="btn">
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setProvider("yahoo");
+                try {
+                  handleYahoo();
+                } catch {}
+              }}
+              className="btn"
+              disabled={loadingLeagues || loadingEpisode}
+              aria-disabled={loadingLeagues || loadingEpisode}
+            >
               Connect Yahoo
             </button>
           </div>
@@ -322,7 +344,6 @@ export default function Dashboard() {
                   ))}
                 </select>
 
-                {/* Optional week selector ("" = auto/current) */}
                 <select
                   className="rounded-xl px-5 py-3 border w-full"
                   value={week}
@@ -398,9 +419,9 @@ export default function Dashboard() {
 
         <p className="text-sm text-gray-400">
           Health:{" "}
-          <a className="underline" href="/ok">
+          <Link className="underline" href="/ok">
             /ok
-          </a>
+          </Link>
         </p>
       </div>
     </main>

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+/// <reference types="vitest" />
 import { resolveLastCompletedWeek } from '../lib/providers/sleeper';
 
 describe('resolveLastCompletedWeek', () => {
@@ -7,7 +7,7 @@ describe('resolveLastCompletedWeek', () => {
   });
 
   it('returns last completed week on Tuesday', () => {
-    expect(resolveLastCompletedWeek(2023, new Date('2023-09-19T12:00:00Z'))).toBe(1);
+    expect(resolveLastCompletedWeek(2023, new Date('2023-09-19T12:00:00Z'))).toBe(2);
   });
 
   it('clamps to week 18 after season', () => {

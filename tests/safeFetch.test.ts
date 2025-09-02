@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+/// <reference types="vitest" />
 import { safeFetch, FetchError } from '../lib/http/safeFetch';
 
 describe('safeFetch', () => {
