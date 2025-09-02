@@ -17,6 +17,7 @@ export interface Team {
   teamId: string;
   managerName: string;
   teamName: string;
+  nickname?: string;
   pointsForWeek: number;
   pointsSeason: number;
   starters?: Player[];
@@ -52,6 +53,13 @@ export interface Facts {
   week: number;
   leagueName: string;
   teams: Team[];
+  weeklyAwards: Array<{
+    key: string;
+    label: string;
+    teamId?: string;
+    value?: number;
+    meta?: Record<string, unknown>;
+  }>;
   topScorer: { team: Team };
   upset?: { winner: Team; loser: Team; margin: number };
   narrowLoss?: { winner: Team; loser: Team; margin: number };
