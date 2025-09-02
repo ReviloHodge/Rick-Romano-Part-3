@@ -55,6 +55,8 @@ export async function GET(req: NextRequest) {
     const userIdParam = url.searchParams.get('userId');
     const { uid: cookieUid } = getOrCreateUid(req);
     const uid = userIdParam ?? stateParam ?? cookieUid ?? null;
+    const errors: string[] = [];
+    if (!uid) errors.push('no_uid');
 
     try {
       const tokens = await oauthExchange(code); // implemented in lib/providers/yahoo.ts
@@ -77,16 +79,21 @@ export async function GET(req: NextRequest) {
         });
         if (error) {
           console.error('Supabase upsert error (yahoo tokens):', error);
+          errors.push('db_upsert');
         } else {
           track?.('oauth_success', uid, { provider: 'yahoo' });
         }
       }
     } catch (err) {
       console.error('Yahoo oauthExchange failed:', err);
-      // Continue; can surface a UI toast via query params later
+      errors.push('oauth_exchange');
     }
 
-    return NextResponse.redirect(new URL('/dashboard?provider=yahoo', req.url));
+    const next = new URL('/dashboard?provider=yahoo', req.url);
+    if (errors.length > 0) {
+      next.searchParams.set('error', errors.join(','));
+    }
+    return NextResponse.redirect(next);
   }
 
   // --- Start-auth branch ---
