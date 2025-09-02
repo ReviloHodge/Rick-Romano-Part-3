@@ -24,10 +24,9 @@ export const getSupabaseAdmin = (): SupabaseClient => {
     const service = process.env.SUPABASE_SERVICE_ROLE as string;
 
     // eslint-disable-next-line no-console
-    console.log('[db] creating Supabase admin client', {
-      SUPABASE_URL: url ? 'present' : 'missing',
-      SUPABASE_SERVICE_ROLE: service ? 'present' : 'missing',
-    });
+    console.log('[db] SUPABASE_URL', url ? 'present' : 'missing');
+    // eslint-disable-next-line no-console
+    console.log('[db] SUPABASE_SERVICE_ROLE', service ? 'present' : 'missing');
 
     // In case SUPABASE_ENV_VARS ever drifts, keep a defensive check
     if (!url || !service) {

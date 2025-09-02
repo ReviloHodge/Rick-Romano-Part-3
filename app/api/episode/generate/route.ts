@@ -5,6 +5,8 @@ import { buildScript } from '@/lib/analysis/script';
 import { adaptSnapshot } from '@/lib/migrate';
 import { track, flush } from '@/lib/metrics';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();

@@ -6,6 +6,8 @@ import { getLeagueWeek as sleeperData } from '@/lib/providers/sleeper';
 import { getLeagueWeek as yahooData, toSnapshot as yahooToSnapshot } from '@/lib/providers/yahoo';
 import { Provider } from '@/lib/types';
 
+export const runtime = 'nodejs';
+
 const lastCompletedWeek = (): number => {
   // naive: assume NFL season and weeks start Tuesday
   const now = new Date();
