@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useYahooAuth } from "./hooks/useYahooAuth";
+import { useSleeperAuth } from "./hooks/useSleeperAuth";
 
 function mapAuthError(code: string) {
   switch (code) {
@@ -18,6 +19,7 @@ function mapAuthError(code: string) {
 
 export default function Home() {
   const handleYahoo = useYahooAuth();
+  const handleSleeper = useSleeperAuth();
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,13 +50,18 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            {/* Sleeper: no OAuth — go straight to dashboard */}
-            <a href="/dashboard?provider=sleeper" className="btn">
+            {/* Sleeper: no OAuth — navigate with stable uid */}
+            <button
+              type="button"
+              onClick={handleSleeper}
+              className="btn"
+            >
               Connect Sleeper
-            </a>
+            </button>
 
             {/* Yahoo: start OAuth using uid as state */}
             <button
+              type="button"
               onClick={handleYahoo}
               className="rounded-xl px-5 py-3 border hover:bg-gray-50"
             >

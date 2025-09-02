@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
-import { useYahooAuth } from '../app/hooks/useYahooAuth';
+import { useSleeperAuth } from '../app/hooks/useSleeperAuth';
 
-describe('useYahooAuth', () => {
+describe('useSleeperAuth', () => {
   beforeEach(() => {
     const store: Record<string, string> = {};
     (globalThis as any).localStorage = {
@@ -20,9 +20,9 @@ describe('useYahooAuth', () => {
   });
 
   it('returns stable UID and redirect URL', () => {
-    const start = useYahooAuth();
+    const start = useSleeperAuth();
     const first = start();
-    expect(first.url).toBe(`/api/auth/yahoo?userId=${encodeURIComponent(first.uid)}`);
+    expect(first.url).toBe('/dashboard?provider=sleeper');
     expect(localStorage.getItem('uid')).toBe(first.uid);
     expect(window.location.href).toBe(first.url);
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useYahooAuth } from "../hooks/useYahooAuth";
+import { useSleeperAuth } from "../hooks/useSleeperAuth";
 
 type League = { leagueId: string; name: string; season: string };
 
@@ -130,6 +131,7 @@ export default function Dashboard() {
   }, [provider]);
 
   const handleYahoo = useYahooAuth();
+  const handleSleeper = useSleeperAuth();
 
   async function onGenerate() {
     if (!selectedLeague) return;
@@ -225,10 +227,15 @@ export default function Dashboard() {
           <p>Provider connected: {provider}</p>
         ) : (
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="/dashboard?provider=sleeper" className="btn">
-              Connect Sleeper
-            </a>
             <button
+              type="button"
+              onClick={handleSleeper}
+              className="btn"
+            >
+              Connect Sleeper
+            </button>
+            <button
+              type="button"
               onClick={handleYahoo}
               className="rounded-xl px-5 py-3 border hover:bg-gray-50"
             >
