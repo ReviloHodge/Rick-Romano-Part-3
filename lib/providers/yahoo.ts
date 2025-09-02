@@ -55,9 +55,28 @@ export async function oauthExchange(code: string): Promise<YahooTokenResponse> {
 
   if (!res.ok) {
     let err: unknown;
-    try { err = await res.json(); } catch { err = await res.text(); }
+    try {
+      err = await res.json();
+    } catch {
+      err = await res.text();
+    }
+
+    // Log full error body for debugging
     console.error("Yahoo token exchange failed", res.status, err);
-    throw new Error("yahoo_oauth_exchange_failed");
+
+    // Propagate details so callers can surface actionable info
+    const detail =
+      err == null
+        ? ""
+        : typeof err === "string"
+        ? err
+        : JSON.stringify(err);
+
+    throw new Error(
+      detail
+        ? `yahoo_oauth_exchange_failed: ${detail}`
+        : "yahoo_oauth_exchange_failed",
+    );
   }
 
   return res.json();
