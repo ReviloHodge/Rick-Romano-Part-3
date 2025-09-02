@@ -94,7 +94,7 @@ export default function Dashboard() {
 
   // Fetch leagues when Yahoo is connected
   useEffect(() => {
-    if (provider !== "yahoo") return;
+    if (provider !== "yahoo" || authError) return;
 
     setError(null);
     setLeagues([]);
@@ -131,7 +131,7 @@ export default function Dashboard() {
         setLoadingLeagues(false);
         setStatus("");
       });
-  }, [provider]);
+  }, [provider, authError]);
 
   const handleYahoo = useYahooAuth();
   const handleSleeper = useSleeperAuth();
