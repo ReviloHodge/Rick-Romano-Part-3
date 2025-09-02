@@ -52,6 +52,9 @@ export default function Dashboard() {
   const [selectedLeague, setSelectedLeague] = useState("");
   const [status, setStatus] = useState("");
 
+  // Sleeper league entry
+  const [sleeperLeague, setSleeperLeague] = useState("");
+
   // Optional week selector ("" = auto/current)
   const [week, setWeek] = useState<string>("");
 
@@ -131,6 +134,55 @@ export default function Dashboard() {
 
   const handleYahoo = useYahooAuth();
 
+  async function runEpisodeFlow(
+    provider: string,
+    leagueId: string,
+    uid: string,
+    week?: number
+  ) {
+    setStatus("Fetching league snapshot...");
+    const snapshotRes = await fetch("/api/snapshot/fetch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, leagueId, week, userId: uid }),
+    });
+    const snapshotJson = await snapshotRes.json();
+    if (!snapshotRes.ok || snapshotJson?.ok === false) {
+      throw new Error(snapshotJson?.error || "Failed to fetch snapshot");
+    }
+
+    const effectiveWeek = week ?? snapshotJson.week;
+
+    setStatus("Generating episode...");
+    const episodeRes = await fetch("/api/episode/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider,
+        leagueId,
+        week: effectiveWeek,
+        userId: uid,
+      }),
+    });
+    const { episodeId, error: epError } = await episodeRes.json();
+    if (!episodeRes.ok || !episodeId) {
+      throw new Error(epError || "Failed to generate episode");
+    }
+
+    setStatus("Rendering episode...");
+    const renderRes = await fetch("/api/episode/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ episodeId }),
+    });
+    const renderJson = await renderRes.json();
+    if (!renderRes.ok || renderJson?.ok === false) {
+      throw new Error(renderJson?.error || "Failed to render episode");
+    }
+
+    return episodeId as string;
+  }
+
   async function onGenerate() {
     if (!selectedLeague) return;
 
@@ -138,59 +190,23 @@ export default function Dashboard() {
     const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
     localStorage.setItem("uid", uid);
 
+    // lightweight metric
+    fetch("/api/metrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: "cta_click", userId: uid }),
+    }).catch(() => {});
+
     setLoadingEpisode(true);
-    setStatus("Generating episode...");
     try {
-      // If user selected a week, send it; otherwise let backend pick (undefined).
       const requestedWeek =
         week && !Number.isNaN(Number(week)) ? Number(week) : undefined;
-
-      setStatus("Fetching league snapshot...");
-      const snapshotRes = await fetch("/api/snapshot/fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: "yahoo",
-          leagueId: selectedLeague,
-          week: requestedWeek,
-          userId: uid,
-        }),
-      });
-      const snapshotJson = await snapshotRes.json();
-      if (!snapshotRes.ok || snapshotJson?.ok === false) {
-        throw new Error(snapshotJson?.error || "Failed to fetch snapshot");
-      }
-
-      const effectiveWeek =
-        requestedWeek ?? snapshotJson.week ?? undefined;
-
-      setStatus("Generating episode...");
-      const episodeRes = await fetch("/api/episode/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: "yahoo",
-          leagueId: selectedLeague,
-          week: effectiveWeek,
-          userId: uid,
-        }),
-      });
-      const { episodeId, error: epError } = await episodeRes.json();
-      if (!episodeRes.ok || !episodeId) {
-        throw new Error(epError || "Failed to generate episode");
-      }
-
-      setStatus("Rendering episode...");
-      const renderRes = await fetch("/api/episode/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episodeId }),
-      });
-      const renderJson = await renderRes.json();
-      if (!renderRes.ok || renderJson?.ok === false) {
-        throw new Error(renderJson?.error || "Failed to render episode");
-      }
-
+      const episodeId = await runEpisodeFlow(
+        "yahoo",
+        selectedLeague,
+        uid,
+        requestedWeek
+      );
       setStatus("Episode ready! Redirecting...");
       router.push(`/e/${episodeId}`);
     } catch (e: any) {
@@ -204,6 +220,44 @@ export default function Dashboard() {
     } finally {
       setLoadingEpisode(false);
       // Keep status text for screen readers; it will clear on next interaction.
+    }
+  }
+
+  async function onSleeperSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!sleeperLeague.trim()) return;
+
+    let leagueId = sleeperLeague.trim();
+    const match = leagueId.match(/\/league\/(\d+)/);
+    if (match) {
+      leagueId = match[1];
+    }
+
+    const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
+    localStorage.setItem("uid", uid);
+
+    fetch("/api/metrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: "cta_click", userId: uid }),
+    }).catch(() => {});
+
+    setLoadingEpisode(true);
+    setError(null);
+    try {
+      const episodeId = await runEpisodeFlow("sleeper", leagueId, uid);
+      setStatus("Episode ready! Redirecting...");
+      router.push(`/e/${episodeId}`);
+    } catch (e: any) {
+      if (typeof e?.message === "string") {
+        setError(e.message);
+        setStatus(`Error: ${e.message}`);
+      } else {
+        setError("internal_error:unknown");
+        setStatus("Error: internal_error:unknown");
+      }
+    } finally {
+      setLoadingEpisode(false);
     }
   }
 
@@ -228,16 +282,13 @@ export default function Dashboard() {
             <a href="/dashboard?provider=sleeper" className="btn">
               Connect Sleeper
             </a>
-            <button
-              onClick={handleYahoo}
-              className="rounded-xl px-5 py-3 border hover:bg-gray-50"
-            >
+            <button onClick={handleYahoo} className="btn">
               Connect Yahoo
             </button>
           </div>
         )}
 
-        <Link href="/" className="rounded-xl px-5 py-3 border hover:bg-gray-50">
+        <Link href="/" className="btn">
           Back to Home
         </Link>
 
@@ -298,13 +349,50 @@ export default function Dashboard() {
                       <span>Generating…</span>
                     </div>
                   ) : (
-                    "Generate Episode"
+                    "Create Recap"
                   )}
                 </button>
 
                 {status && <p className="text-sm text-gray-600">{status}</p>}
               </>
             )}
+          </div>
+        )}
+
+        {provider === "sleeper" && (
+          <div className="card space-y-3">
+            <h2 className="text-xl font-semibold">Enter your Sleeper league</h2>
+
+            {error && <p className="text-red-600">Error: {error}</p>}
+
+            <form onSubmit={onSleeperSubmit} className="space-y-3">
+              <input
+                type="text"
+                placeholder="Sleeper League URL or ID"
+                className="rounded-xl px-5 py-3 border w-full"
+                value={sleeperLeague}
+                onChange={(e) => setSleeperLeague(e.target.value)}
+                disabled={loadingEpisode}
+              />
+
+              <button
+                type="submit"
+                className="btn w-full"
+                disabled={!sleeperLeague || loadingEpisode}
+                aria-busy={loadingEpisode}
+              >
+                {loadingEpisode ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Spinner label="Generating episode" />
+                    <span>Generating…</span>
+                  </div>
+                ) : (
+                  "Create Recap"
+                )}
+              </button>
+            </form>
+
+            {status && <p className="text-sm text-gray-600">{status}</p>}
           </div>
         )}
 
