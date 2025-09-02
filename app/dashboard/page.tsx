@@ -73,6 +73,20 @@ export default function Dashboard() {
     }
   }
 
+  // Map API errors to user-friendly guidance
+  function mapClientError(code: string) {
+    switch (code) {
+      case "supabase_lookup_failed":
+      case "Missing Supabase service env vars":
+      case "Missing Supabase client env vars":
+        return "Supabase not configured. Set SUPABASE_URL and service role key on the server.";
+      case "no_token":
+        return "No league connection found. Reconnect your provider account.";
+      default:
+        return code;
+    }
+  }
+
   // Read provider + auth error from URL
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -121,11 +135,11 @@ export default function Dashboard() {
         setLeagues(normalized);
       })
       .catch((e) => {
-        if (typeof e?.message === "string") {
-          setError(e.message);
-        } else {
-          setError("internal_error:unknown");
-        }
+        const msg =
+          typeof e?.message === "string"
+            ? mapClientError(e.message)
+            : "internal_error:unknown";
+        setError(msg);
       })
       .finally(() => {
         setLoadingLeagues(false);
@@ -210,13 +224,12 @@ export default function Dashboard() {
       setStatus("Episode ready! Redirecting...");
       router.push(`/e/${episodeId}`);
     } catch (e: any) {
-      if (typeof e?.message === "string") {
-        setError(e.message);
-        setStatus(`Error: ${e.message}`);
-      } else {
-        setError("internal_error:unknown");
-        setStatus("Error: internal_error:unknown");
-      }
+      const msg =
+        typeof e?.message === "string"
+          ? mapClientError(e.message)
+          : "internal_error:unknown";
+      setError(msg);
+      setStatus(`Error: ${msg}`);
     } finally {
       setLoadingEpisode(false);
     }
@@ -248,13 +261,12 @@ export default function Dashboard() {
       setStatus("Episode ready! Redirecting...");
       router.push(`/e/${episodeId}`);
     } catch (e: any) {
-      if (typeof e?.message === "string") {
-        setError(e.message);
-        setStatus(`Error: ${e.message}`);
-      } else {
-        setError("internal_error:unknown");
-        setStatus("Error: internal_error:unknown");
-      }
+      const msg =
+        typeof e?.message === "string"
+          ? mapClientError(e.message)
+          : "internal_error:unknown";
+      setError(msg);
+      setStatus(`Error: ${msg}`);
     } finally {
       setLoadingEpisode(false);
     }

@@ -19,6 +19,10 @@ export const getSupabaseAdmin = (): SupabaseClient => {
   if (!_supabaseAdmin) {
     const url = process.env.SUPABASE_URL;
     const service = process.env.SUPABASE_SERVICE_ROLE;
+    console.log('[db] creating Supabase admin client', {
+      SUPABASE_URL: url ? 'present' : 'missing',
+      SUPABASE_SERVICE_ROLE: service ? 'present' : 'missing',
+    });
     if (!url || !service) {
       throw new Error('Missing Supabase service env vars');
     }
