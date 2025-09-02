@@ -1,15 +1,15 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { validateEnv, SUPABASE_ENV_VARS } from './validateEnv';
+
+validateEnv(SUPABASE_ENV_VARS);
 
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
 export const getSupabase = (): SupabaseClient => {
   if (!_supabase) {
-    const url = process.env.SUPABASE_URL;
-    const anon = process.env.SUPABASE_ANON_KEY;
-    if (!url || !anon) {
-      throw new Error('Missing Supabase client env vars');
-    }
+    const url = process.env.SUPABASE_URL!;
+    const anon = process.env.SUPABASE_ANON_KEY!;
     _supabase = createClient(url, anon, { auth: { persistSession: false } });
   }
   return _supabase;
@@ -17,11 +17,8 @@ export const getSupabase = (): SupabaseClient => {
 
 export const getSupabaseAdmin = (): SupabaseClient => {
   if (!_supabaseAdmin) {
-    const url = process.env.SUPABASE_URL;
-    const service = process.env.SUPABASE_SERVICE_ROLE;
-    if (!url || !service) {
-      throw new Error('Missing Supabase service env vars');
-    }
+    const url = process.env.SUPABASE_URL!;
+    const service = process.env.SUPABASE_SERVICE_ROLE!;
     _supabaseAdmin = createClient(url, service, {
       auth: { persistSession: false },
     });

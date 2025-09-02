@@ -8,6 +8,12 @@ import { oauthExchange } from '../../../../lib/providers/yahoo';
 import { encryptToken } from '../../../../lib/security';
 import { getSupabaseAdmin } from '../../../../lib/db';
 import { track } from '../../../../lib/metrics';
+import { validateEnv, YAHOO_ENV_VARS } from '../../../../lib/validateEnv';
+
+validateEnv(YAHOO_ENV_VARS);
+
+const clientId = process.env.YAHOO_CLIENT_ID!;
+const redirectUri = process.env.YAHOO_REDIRECT_URI!;
 
 /**
  * Build Yahoo OAuth authorize URL.
@@ -35,16 +41,6 @@ function buildAuth(clientId: string, redirectUri: string, state: string) {
  * Supports ?debug=1 to return the built URL as JSON instead of redirect.
  */
 export async function GET(req: NextRequest) {
-  const clientId = process.env.YAHOO_CLIENT_ID;
-  const redirectUri = process.env.YAHOO_REDIRECT_URI;
-
-  if (!clientId || !redirectUri) {
-    return NextResponse.json(
-      { ok: false, error: 'Missing YAHOO_CLIENT_ID or YAHOO_REDIRECT_URI' },
-      { status: 500 }
-    );
-  }
-
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
   const debug = url.searchParams.get('debug') === '1';
@@ -121,16 +117,6 @@ export async function GET(req: NextRequest) {
  * Return the built authorize URL as JSON (no redirect).
  */
 export async function POST(req: NextRequest) {
-  const clientId = process.env.YAHOO_CLIENT_ID;
-  const redirectUri = process.env.YAHOO_REDIRECT_URI;
-
-  if (!clientId || !redirectUri) {
-    return NextResponse.json(
-      { ok: false, error: 'Missing YAHOO_CLIENT_ID or YAHOO_REDIRECT_URI' },
-      { status: 500 }
-    );
-  }
-
   const { uid, headers } = getOrCreateUid(req);
   const auth = buildAuth(clientId, redirectUri, uid);
 
