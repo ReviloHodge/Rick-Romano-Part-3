@@ -11,7 +11,7 @@ export interface YahooTokenResponse {
   [key: string]: any;
 }
 
-export type League = { league_id: string; name: string; season: string };
+export type League = { leagueId: string; name: string; season: string };
 
 /** Exchange an authorization code for tokens. */
 export async function oauthExchange(code: string): Promise<YahooTokenResponse> {
@@ -116,7 +116,7 @@ export async function listLeagues(accessToken: string): Promise<League[]> {
 
       if (league_key && name) {
         leagues.push({
-          league_id: String(league_key),
+          leagueId: String(league_key),
           name: String(name),
           season: season != null ? String(season) : "",
         });

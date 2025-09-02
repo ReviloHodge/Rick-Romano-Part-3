@@ -8,29 +8,29 @@ export function buildScript({
   expert_headlines: string[];
 }): string {
   const lines: string[] = [];
-  lines.push(`# Week ${facts.week} Recap — ${facts.league_name}`);
+  lines.push(`# Week ${facts.week} Recap — ${facts.leagueName}`);
   lines.push(
-    `${facts.top_scorer.team.manager_name}'s ${facts.top_scorer.team.team_name} slapped ${facts.top_scorer.team.points_for_week} on the board.`
+    `${facts.topScorer.team.managerName}'s ${facts.topScorer.team.teamName} slapped ${facts.topScorer.team.pointsForWeek} on the board.`
   );
 
   if (facts.upset) {
     lines.push(
-      `Upset special: ${facts.upset.winner.team_name} shocked ${facts.upset.loser.team_name} by ${facts.upset.margin}.`
+      `Upset special: ${facts.upset.winner.teamName} shocked ${facts.upset.loser.teamName} by ${facts.upset.margin}.`
     );
   }
-  if (facts.narrow_loss) {
+  if (facts.narrowLoss) {
     lines.push(
-      `Nail-biter: ${facts.narrow_loss.loser.team_name} lost by ${facts.narrow_loss.margin}.`
+      `Nail-biter: ${facts.narrowLoss.loser.teamName} lost by ${facts.narrowLoss.margin}.`
     );
   }
-  if (facts.bench_blunder) {
+  if (facts.benchBlunder) {
     lines.push(
-      `Bench blunder: ${facts.bench_blunder.team.manager_name} sat ${facts.bench_blunder.bench.name} (${facts.bench_blunder.bench.points}).`
+      `Bench blunder: ${facts.benchBlunder.team.managerName} sat ${facts.benchBlunder.bench.name} (${facts.benchBlunder.bench.points}).`
     );
   }
-  if (facts.waiver_roi) {
+  if (facts.waiverRoi) {
     lines.push(
-      `Waiver win: ${facts.waiver_roi.team.manager_name} got ${facts.waiver_roi.points} from pickups.`
+      `Waiver win: ${facts.waiverRoi.team.managerName} got ${facts.waiverRoi.points} from pickups.`
     );
   }
   facts.injuries.forEach((i) =>

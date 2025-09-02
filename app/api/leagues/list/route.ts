@@ -9,7 +9,7 @@ import { listLeagues as yahooListLeagues } from '../../../../lib/providers/yahoo
 export const runtime = 'nodejs';       // <— ensure Node, not Edge
 export const dynamic = 'force-dynamic';
 
-type League = { league_id: string; name: string; season: string };
+type League = { leagueId: string; name: string; season: string };
 
 function fail(stage: string, detail?: unknown, status = 500) {
   if (detail) console.error(`[leagues:list] ${stage}`, detail);
