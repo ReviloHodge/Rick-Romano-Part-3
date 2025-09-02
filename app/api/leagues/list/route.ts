@@ -37,7 +37,7 @@ function safeUid(req: NextRequest) {
     // Fallback: synthesize a uid and set-cookie ourselves
     const synthetic = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
     const headers = {
-      'set-cookie': `uid=${encodeURIComponent(synthetic)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`,
+      'Set-Cookie': `uid=${encodeURIComponent(synthetic)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`,
     };
     console.warn('[leagues:list] safeUid fallback used');
     return { uid: synthetic, headers };
