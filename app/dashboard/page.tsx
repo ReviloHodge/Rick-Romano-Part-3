@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useYahooAuth } from "../hooks/useYahooAuth";
 
 type League = { leagueId: string; name: string; season: string };
@@ -10,6 +11,10 @@ export default function Dashboard() {
   const [provider, setProvider] = useState<string | null>(null);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [leagueId, setLeagueId] = useState<string>("");
+  const [week, setWeek] = useState<string>("");
+  const [status, setStatus] = useState<string>("");
+  const router = useRouter();
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -52,6 +57,44 @@ export default function Dashboard() {
 
   const handleYahoo = useYahooAuth();
 
+  async function generateEpisode() {
+    try {
+      const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
+      localStorage.setItem("uid", uid);
+      setStatus("Fetching league snapshot...");
+      await fetch("/api/snapshot/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          leagueId,
+          week: Number(week),
+          userId: uid,
+        }),
+      });
+      setStatus("Generating episode...");
+      const epRes = await fetch("/api/episode/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          leagueId,
+          week: Number(week),
+          userId: uid,
+        }),
+      });
+      const { episodeId } = await epRes.json();
+      setStatus("Episode generated! Redirecting...");
+      router.push(`/e/${episodeId}`);
+    } catch (e) {
+      if (e instanceof Error) {
+        setStatus(`Error: ${e.message}`);
+      } else {
+        setStatus("Error generating episode");
+      }
+    }
+  }
+
   return (
     <main className="min-h-screen px-6 py-16">
       <div className="container space-y-6">
@@ -88,19 +131,48 @@ export default function Dashboard() {
             )}
 
             {leagues.length > 0 && (
-              <select
-                className="rounded-xl px-5 py-3 border w-full"
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Select a league…
-                </option>
-                {leagues.map((l) => (
-                  <option key={l.leagueId} value={l.leagueId}>
-                    {l.name} {l.season ? `(${l.season})` : ""}
+              <>
+                <select
+                  className="rounded-xl px-5 py-3 border w-full"
+                  value={leagueId}
+                  onChange={(e) => setLeagueId(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Select a league…
                   </option>
-                ))}
-              </select>
+                  {leagues.map((l) => (
+                    <option key={l.leagueId} value={l.leagueId}>
+                      {l.name} {l.season ? `(${l.season})` : ""}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="rounded-xl px-5 py-3 border w-full"
+                  value={week}
+                  onChange={(e) => setWeek(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Select week…
+                  </option>
+                  {Array.from({ length: 18 }, (_, i) => i + 1).map((w) => (
+                    <option key={w} value={w}>
+                      Week {w}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={generateEpisode}
+                  className="btn w-full"
+                  disabled={!leagueId || !week || status.startsWith("Fetching") || status.startsWith("Generating")}
+                >
+                  Generate Episode
+                </button>
+                {status && (
+                  <p className="text-sm text-gray-600">{status}</p>
+                )}
+              </>
             )}
           </div>
         )}
