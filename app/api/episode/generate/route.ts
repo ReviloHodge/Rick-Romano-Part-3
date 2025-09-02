@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/db';
 import { computeFacts } from '@/lib/analysis/compute';
 import { buildScript } from '@/lib/analysis/script';
+import { adaptSnapshot } from '@/lib/migrate';
 import { track } from '@/lib/metrics';
 
 export async function POST(req: NextRequest) {
@@ -33,7 +34,8 @@ export async function POST(req: NextRequest) {
     if (snapErr || !snap) {
       return NextResponse.json({ ok: false, error: 'snapshot_missing' }, { status: 400 });
     }
-    const facts = computeFacts(snap.raw_json);
+    const snapshot = adaptSnapshot(snap.raw_json);
+    const facts = computeFacts(snapshot);
     const script = buildScript({ facts, expert_headlines: [] });
     const { data: ep, error: epErr } = await supabaseAdmin
       .from('episode')

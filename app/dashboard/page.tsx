@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type League = { league_id: string; name: string; season: string };
+type League = { leagueId: string; name: string; season: string };
 
 export default function Dashboard() {
   const [provider, setProvider] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export default function Dashboard() {
                   Select a league…
                 </option>
                 {leagues.map((l) => (
-                  <option key={l.league_id} value={l.league_id}>
+                  <option key={l.leagueId} value={l.leagueId}>
                     {l.name} {l.season ? `(${l.season})` : ""}
                   </option>
                 ))}

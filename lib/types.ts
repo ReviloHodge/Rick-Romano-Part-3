@@ -1,7 +1,7 @@
 export type Provider = 'sleeper' | 'yahoo';
 
 export interface League {
-  league_id: string;
+  leagueId: string;
   name: string;
   season: string | number;
 }
@@ -14,11 +14,11 @@ export interface Player {
 }
 
 export interface Team {
-  team_id: string;
-  manager_name: string;
-  team_name: string;
-  points_for_week: number;
-  points_season: number;
+  teamId: string;
+  managerName: string;
+  teamName: string;
+  pointsForWeek: number;
+  pointsSeason: number;
   starters?: Player[];
   bench?: Player[];
 }
@@ -26,8 +26,8 @@ export interface Team {
 export interface Matchup {
   home: string;
   away: string;
-  home_score: number;
-  away_score: number;
+  homeScore: number;
+  awayScore: number;
 }
 
 export interface Injury {
@@ -38,11 +38,11 @@ export interface Injury {
 
 export interface Snapshot {
   week: number;
-  league_name: string;
+  leagueName: string;
   teams: Team[];
   matchups: Matchup[];
   transactions: {
-    waivers: { team_id: string; player: Player; started: boolean }[];
+    waivers: { teamId: string; player: Player; started: boolean }[];
     trades: any[]; // TODO refine
     injuries: Injury[];
   };
@@ -50,14 +50,14 @@ export interface Snapshot {
 
 export interface Facts {
   week: number;
-  league_name: string;
+  leagueName: string;
   teams: Team[];
-  top_scorer: { team: Team };
+  topScorer: { team: Team };
   upset?: { winner: Team; loser: Team; margin: number };
-  narrow_loss?: { winner: Team; loser: Team; margin: number };
-  bench_blunder?: { team: Team; starter: Player; bench: Player; delta: number };
-  waiver_roi?: { team: Team; points: number };
-  trade_impact?: any; // TODO refine
+  narrowLoss?: { winner: Team; loser: Team; margin: number };
+  benchBlunder?: { team: Team; starter: Player; bench: Player; delta: number };
+  waiverRoi?: { team: Team; points: number };
+  tradeImpact?: any; // TODO refine
   injuries: Injury[];
-  rivalries: { teamA: string; teamB: string; history_summary: string }[];
+  rivalries: { teamA: string; teamB: string; historySummary: string }[];
 }
