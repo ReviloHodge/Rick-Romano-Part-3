@@ -45,6 +45,8 @@ export async function GET(req: NextRequest) {
         const { error } = await supabase.from('league_connection').upsert({
           user_id: uid,
           provider: 'yahoo',
+          // Temporarily store tokens without a league. Updated after user selects a league.
+          league_id: '',
           access_token_enc: access_enc,
           refresh_token_enc: refresh_enc,
           expires_at,

@@ -49,17 +49,39 @@ export async function POST(req: NextRequest) {
 
     if (provider === 'yahoo') {
       let data:
-        | { access_token_enc: string; refresh_token_enc?: string; expires_at?: string }
+        | {
+            id: string;
+            access_token_enc: string;
+            refresh_token_enc?: string;
+            expires_at?: string;
+          }
         | null = null;
       try {
         const result = await supabaseAdmin
           .from('league_connection')
-          .select('access_token_enc, refresh_token_enc, expires_at')
+          .select('id, access_token_enc, refresh_token_enc, expires_at')
           .eq('provider', provider)
           .eq('league_id', leagueId)
-          .single();
+          .maybeSingle();
         data = result.data;
-        if (result.error || !data) {
+        if (!data) {
+          // If tokens exist without a league, associate them now.
+          const fallback = await supabaseAdmin
+            .from('league_connection')
+            .select('id, access_token_enc, refresh_token_enc, expires_at')
+            .eq('provider', provider)
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (!fallback.data) {
+            return NextResponse.json({ ok: false, error: 'no_token' }, { status: 400 });
+          }
+          await supabaseAdmin
+            .from('league_connection')
+            .update({ league_id: leagueId })
+            .eq('id', fallback.data.id);
+          data = fallback.data;
+        }
+        if (result.error) {
           return NextResponse.json({ ok: false, error: 'no_token' }, { status: 400 });
         }
       } catch (dbErr) {
@@ -70,6 +92,10 @@ export async function POST(req: NextRequest) {
           error: dbErr,
         });
         return NextResponse.json({ ok: false, error: 'supabase_lookup_failed' }, { status: 500 });
+      }
+
+      if (!data) {
+        return NextResponse.json({ ok: false, error: 'no_token' }, { status: 400 });
       }
 
       access = await decryptToken(data.access_token_enc);
