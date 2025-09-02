@@ -27,7 +27,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@supabase/supabase-js": ["lib/stubs/supabase.ts"],
       "posthog-node": ["lib/stubs/posthog.ts"]
     }
   },
