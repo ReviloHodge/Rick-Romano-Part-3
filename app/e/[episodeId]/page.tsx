@@ -25,7 +25,17 @@ export default async function EpisodePage({
             controls
             className="w-full"
             src={data.audio_url}
-            onPlay={() => fetch('/api/metrics', { method: 'POST' })}
+            onPlay={() => {
+              fetch('/api/metrics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  event: 'episode_played',
+                  userId: data.user_id,
+                  properties: { episode_id: data.id },
+                }),
+              }).catch((err) => console.error('track error', err));
+            }}
           />
         )}
         <button
