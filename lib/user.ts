@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { getSupabaseAdmin } from './db';
 
 function parseCookie(cookieHeader: string | null): Record<string, string> {
   if (!cookieHeader) return {};
@@ -41,3 +42,14 @@ export function getOrCreateUid(
     headers: { 'Set-Cookie': cookie },
   };
 }
+
+export const ensureAppUser = async (uid: string): Promise<void> => {
+  const { error } = await getSupabaseAdmin()
+    .from('app_user')
+    .upsert({ id: uid }, { onConflict: 'id' });
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('ensureAppUser upsert error:', error);
+    throw error;
+  }
+};
