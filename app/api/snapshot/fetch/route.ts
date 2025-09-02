@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decryptToken } from '@/lib/security';
 import { getSupabaseAdmin, upsertSnapshot } from '@/lib/db';
-import { track } from '@/lib/metrics';
+import { track, flush } from '@/lib/metrics';
 import { getLeagueWeek as sleeperData } from '@/lib/providers/sleeper';
 import { getLeagueWeekData as yahooData } from '@/lib/providers/yahoo';
 import { Provider } from '@/lib/types';
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       league_id: leagueId,
       week: fetchWeek,
     });
+    await flush();
     return NextResponse.json({ ok: true, week: fetchWeek });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });

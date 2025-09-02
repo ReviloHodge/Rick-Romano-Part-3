@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/db';
 import { computeFacts } from '@/lib/analysis/compute';
 import { buildScript } from '@/lib/analysis/script';
-import { track } from '@/lib/metrics';
+import { track, flush } from '@/lib/metrics';
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'db_error' }, { status: 500 });
     }
     track('episode_generated', userId, { episode_id: ep.id });
+    await flush();
     return NextResponse.json({ ok: true, episodeId: ep.id });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
