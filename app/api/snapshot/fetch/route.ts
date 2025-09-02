@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     await upsertSnapshot(provider, leagueId, fetchWeek, snapshot);
     track('snapshot_saved', userId, {
       provider,
-      league_id: leagueId,
+      leagueId: leagueId,
       week: fetchWeek,
     });
     return NextResponse.json({ ok: true, week: fetchWeek });

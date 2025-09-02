@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 import { useYahooAuth } from "../hooks/useYahooAuth";
 
-type League = { league_id: string; name: string; season: string };
+type League = { leagueId: string; name: string; season: string };
 
 export default function Dashboard() {
   const [provider, setProvider] = useState<string | null>(null);
@@ -21,15 +20,27 @@ export default function Dashboard() {
     if (provider === "yahoo") {
       setError(null);
       setLeagues([]);
+
       fetch("/api/leagues/list?provider=yahoo", { cache: "no-store" })
         .then((r) => r.json())
         .then((json) => {
           if (!json.ok) throw new Error(json.error || "Failed to load leagues");
-          setLeagues(Array.isArray(json.leagues) ? json.leagues : []);
+
+          const raw = Array.isArray(json.leagues) ? json.leagues : [];
+
+          // Normalize snake_case → camelCase for UI
+          const normalized: League[] = raw.map((l: any) => ({
+            leagueId:
+              l.leagueId ??
+              l.league_id ??
+              (l.id != null ? String(l.id) : ""),
+            name: l.name ?? "",
+            season: l.season ?? l.year ?? "",
+          }));
+
+          setLeagues(normalized);
         })
         .catch((e) => {
-          // If server sent { ok:false, error:'internal_error:STAGE' }, show that.
-          // Otherwise show a generic message.
           if (typeof e?.message === "string") {
             setError(e.message);
           } else {
@@ -77,12 +88,15 @@ export default function Dashboard() {
             )}
 
             {leagues.length > 0 && (
-              <select className="rounded-xl px-5 py-3 border w-full" defaultValue="">
+              <select
+                className="rounded-xl px-5 py-3 border w-full"
+                defaultValue=""
+              >
                 <option value="" disabled>
                   Select a league…
                 </option>
                 {leagues.map((l) => (
-                  <option key={l.league_id} value={l.league_id}>
+                  <option key={l.leagueId} value={l.leagueId}>
                     {l.name} {l.season ? `(${l.season})` : ""}
                   </option>
                 ))}
@@ -92,10 +106,12 @@ export default function Dashboard() {
         )}
 
         <p className="text-sm text-gray-400">
-          Health: <a className="underline" href="/ok">/ok</a>
+          Health:{" "}
+          <a className="underline" href="/ok">
+            /ok
+          </a>
         </p>
       </div>
     </main>
   );
 }
-
