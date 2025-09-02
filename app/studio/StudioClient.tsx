@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import type { LeagueMeta, MatchupWeek } from '../../types/domain';
+import type { EpisodeDraft, LeagueMeta, MatchupWeek } from '../../types/domain';
 import { selectLeague, loadLastWeek } from './actions';
 
 interface Props {
@@ -13,6 +13,7 @@ export default function StudioClient({ demoUsername = '' }: Props) {
   const [leagues, setLeagues] = useState<LeagueMeta[]>([]);
   const [selected, setSelected] = useState<LeagueMeta | null>(null);
   const [week, setWeek] = useState<MatchupWeek | null>(null);
+  const [draft, setDraft] = useState<EpisodeDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -45,7 +46,25 @@ export default function StudioClient({ demoUsername = '' }: Props) {
     startTransition(async () => {
       const data = await loadLastWeek(selected.leagueId);
       setWeek(data);
+      setDraft(null);
     });
+  };
+
+  const handleDraft = async () => {
+    if (!week) return;
+    try {
+      setError(null);
+      const res = await fetch('/api/rick/draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(week),
+      });
+      if (!res.ok) throw new Error('failed');
+      const data: EpisodeDraft = await res.json();
+      setDraft(data);
+    } catch (e) {
+      setError('Failed to draft episode');
+    }
   };
 
   return (
@@ -92,18 +111,12 @@ export default function StudioClient({ demoUsername = '' }: Props) {
           <div>Top scorer: {week.summary.topScorerTeamId} ({week.summary.topScorerPoints})</div>
           <div>Biggest blowout: {week.summary.biggestBlowoutGameId}</div>
           <div>Closest game: {week.summary.closestGameId}</div>
-          <button
-            onClick={() => {
-              fetch('/api/rick/draft', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify(week),
-              });
-            }}
-            className="btn"
-          >
-            Send to Rick
+          <button onClick={handleDraft} className="btn">
+            Draft Episode
           </button>
+          {draft && (
+            <pre className="mt-2 whitespace-pre-wrap">{draft.scriptMarkdown}</pre>
+          )}
         </div>
       )}
     </div>
