@@ -24,7 +24,8 @@ const FANTASY_API = "https://fantasysports.yahooapis.com/fantasy/v2";
 const TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
 const clientId = process.env.YAHOO_CLIENT_ID!;
 const clientSecret = process.env.YAHOO_CLIENT_SECRET!;
-const redirectUri = process.env.YAHOO_REDIRECT_URI!;
+// Normalize to avoid trailing slash mismatches
+const redirectUri = process.env.YAHOO_REDIRECT_URI!.replace(/\/+$/, "");
 
 export interface YahooTokenResponse {
   access_token: string;
@@ -35,6 +36,18 @@ export interface YahooTokenResponse {
 }
 
 export type League = { leagueId: string; name: string; season: string };
+
+/** Build Yahoo OAuth authorize URL. */
+export function buildAuth(state: string) {
+  const auth = new URL("https://api.login.yahoo.com/oauth2/request_auth");
+  auth.searchParams.set("client_id", clientId);
+  auth.searchParams.set("redirect_uri", redirectUri);
+  auth.searchParams.set("response_type", "code");
+  auth.searchParams.set("scope", "fspt-r");
+  auth.searchParams.set("language", "en-us");
+  auth.searchParams.set("state", state);
+  return auth;
+}
 
 /** Exchange an authorization code for tokens. */
 export async function oauthExchange(code: string): Promise<YahooTokenResponse> {
