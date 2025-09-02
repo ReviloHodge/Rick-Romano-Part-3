@@ -4,36 +4,11 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getOrCreateUid } from '../../../../lib/user';
-import { oauthExchange } from '../../../../lib/providers/yahoo';
+import { buildAuth, oauthExchange } from '../../../../lib/providers/yahoo';
 import { encryptToken } from '../../../../lib/security';
 import { getSupabaseAdmin } from '../../../../lib/db';
 import { track } from '../../../../lib/metrics';
-import { validateEnv, YAHOO_ENV_VARS } from '../../../../lib/validateEnv';
 
-validateEnv(YAHOO_ENV_VARS);
-
-const clientId = process.env.YAHOO_CLIENT_ID!;
-// Redirect URI should be https://<your-domain>/api/auth/yahoo (no /callback)
-const redirectUri = process.env.YAHOO_REDIRECT_URI!;
-
-/**
- * Build Yahoo OAuth authorize URL.
- * Required: client_id, redirect_uri, response_type=code, scope=fspt-r, state
- * Note: We intentionally use ONLY `fspt-r` to avoid OpenID requirements.
- */
-function buildAuth(clientId: string, redirectUri: string, state: string) {
-  // Normalize redirect to avoid accidental trailing slash mismatches
-  const normalizedRedirect = redirectUri.replace(/\/+$/, '');
-
-  const auth = new URL('https://api.login.yahoo.com/oauth2/request_auth');
-  auth.searchParams.set('client_id', clientId);
-  auth.searchParams.set('redirect_uri', normalizedRedirect);
-  auth.searchParams.set('response_type', 'code');
-  auth.searchParams.set('scope', 'fspt-r'); // Fantasy Sports read only
-  auth.searchParams.set('language', 'en-us');
-  auth.searchParams.set('state', state);
-  return auth;
-}
 
 /**
  * GET /api/auth/yahoo
@@ -98,7 +73,7 @@ export async function GET(req: NextRequest) {
   const { uid, headers } = getOrCreateUid(req);
   const state = userIdParam ?? uid;
 
-  const auth = buildAuth(clientId, redirectUri, state);
+  const auth = buildAuth(state);
 
   if (debug) {
     return new NextResponse(
@@ -119,7 +94,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const { uid, headers } = getOrCreateUid(req);
-  const auth = buildAuth(clientId, redirectUri, uid);
+  const auth = buildAuth(uid);
 
   return new NextResponse(
     JSON.stringify({ ok: true, auth: auth.toString(), state: uid }),
