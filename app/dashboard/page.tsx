@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useYahooAuth } from "../hooks/useYahooAuth";
+
 type League = { league_id: string; name: string; season: string };
 
 export default function Dashboard() {
@@ -37,11 +39,7 @@ export default function Dashboard() {
     }
   }, [provider]);
 
-  const handleYahoo = () => {
-    const uid = localStorage.getItem("uid") ?? crypto.randomUUID();
-    localStorage.setItem("uid", uid);
-    window.location.href = `/api/auth/yahoo?userId=${encodeURIComponent(uid)}`;
-  };
+  const handleYahoo = useYahooAuth();
 
   return (
     <main className="min-h-screen px-6 py-16">
