@@ -4,13 +4,12 @@ Minimal Next.js 14 + Tailwind starter with:
 - `/ok` health route
 - `/api/auth/sleeper` Sleeper OAuth redirect
 - `/api/auth/yahoo` Yahoo OAuth redirect
-- `/api/auth/*/callback` posts `{ provider, code }` to Make.com webhook
 
 ## Env vars (Vercel → Project → Settings → Environment Variables)
 - `SLEEPER_CLIENT_ID` / `SLEEPER_CLIENT_SECRET`
-- `SLEEPER_REDIRECT_URI` — `https://<your-domain>/api/auth/sleeper/callback`
+- `SLEEPER_REDIRECT_URI` — `https://<your-domain>/api/auth/sleeper`
 - `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`
-- `YAHOO_REDIRECT_URI` — `https://<your-domain>/api/auth/yahoo/callback`
+- `YAHOO_REDIRECT_URI` — `https://<your-domain>/api/auth/yahoo` (must match Yahoo Developer app)
 - `MAKE_CONNECTOR_URL` — your Make "connector.start" webhook URL
 - (optional) `NEXT_PUBLIC_MAKE_CONNECTOR_URL` — same as above if you prefer exposing to client
 
