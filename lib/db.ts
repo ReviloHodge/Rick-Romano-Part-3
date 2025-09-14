@@ -1,13 +1,12 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { validateEnv, SUPABASE_ENV_VARS } from './validateEnv';
 
-validateEnv(SUPABASE_ENV_VARS);
-
 let _supabase: SupabaseClient | null = null;
 let _supabaseAdmin: SupabaseClient | null = null;
 
 export const getSupabase = (): SupabaseClient => {
   if (!_supabase) {
+    validateEnv(SUPABASE_ENV_VARS);
     // validateEnv guarantees presence; use type assertion (avoids non-null '!')
     const url = process.env.SUPABASE_URL as string;
     const anon = process.env.SUPABASE_ANON_KEY as string;
@@ -19,6 +18,7 @@ export const getSupabase = (): SupabaseClient => {
 
 export const getSupabaseAdmin = (): SupabaseClient => {
   if (!_supabaseAdmin) {
+    validateEnv(SUPABASE_ENV_VARS);
     // validateEnv guarantees presence; still add lightweight diagnostics
     const url = process.env.SUPABASE_URL as string;
     const service = process.env.SUPABASE_SERVICE_ROLE as string;
