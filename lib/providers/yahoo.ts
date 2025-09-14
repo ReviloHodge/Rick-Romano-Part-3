@@ -3,6 +3,7 @@
 import { safeFetch, FetchError } from "../http/safeFetch";
 import { ZYahooMatchupWeek } from "../schemas";
 import { z } from "zod";
+// Defer env validation to runtime paths to avoid build-time failures
 import { validateEnv, YAHOO_ENV_VARS } from "../validateEnv";
 import type {
   LeagueMeta,
@@ -18,14 +19,19 @@ import type {
   Matchup as SnapshotMatchup,
 } from "../types";
 
-validateEnv(YAHOO_ENV_VARS);
+// IMPORTANT: Do not validate env at module import time in Next.js app router
+// to prevent build-time crashes when env vars are not present in CI/build envs.
+// We'll validate inside the request/handler functions.
 
 const FANTASY_API = "https://fantasysports.yahooapis.com/fantasy/v2";
 const TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
-const clientId = process.env.YAHOO_CLIENT_ID!;
-const clientSecret = process.env.YAHOO_CLIENT_SECRET!;
-// Normalize to avoid trailing slash mismatches
-const redirectUri = process.env.YAHOO_REDIRECT_URI!.replace(/\/+$/, "");
+const getYahooEnv = () => {
+  const clientId = process.env.YAHOO_CLIENT_ID || "";
+  const clientSecret = process.env.YAHOO_CLIENT_SECRET || "";
+  const rawRedirect = process.env.YAHOO_REDIRECT_URI || "";
+  const redirectUri = rawRedirect ? rawRedirect.replace(/\/+$/, "") : "";
+  return { clientId, clientSecret, redirectUri };
+};
 
 export interface YahooTokenResponse {
   access_token: string;
@@ -39,6 +45,8 @@ export type League = { leagueId: string; name: string; season: string };
 
 /** Build Yahoo OAuth authorize URL. */
 export function buildAuth(state: string) {
+  validateEnv(YAHOO_ENV_VARS);
+  const { clientId, redirectUri } = getYahooEnv();
   const auth = new URL("https://api.login.yahoo.com/oauth2/request_auth");
   auth.searchParams.set("client_id", clientId);
   auth.searchParams.set("redirect_uri", redirectUri);
@@ -52,6 +60,8 @@ export function buildAuth(state: string) {
 
 /** Exchange an authorization code for tokens. */
 export async function oauthExchange(code: string): Promise<YahooTokenResponse> {
+  validateEnv(YAHOO_ENV_VARS);
+  const { clientId, clientSecret, redirectUri } = getYahooEnv();
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch(TOKEN_URL, {
@@ -98,6 +108,8 @@ export async function oauthExchange(code: string): Promise<YahooTokenResponse> {
 
 /** Refresh an access token using a refresh_token. */
 export async function refreshToken(refresh_token: string): Promise<YahooTokenResponse> {
+  validateEnv(YAHOO_ENV_VARS);
+  const { clientId, clientSecret, redirectUri } = getYahooEnv();
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch(TOKEN_URL, {
