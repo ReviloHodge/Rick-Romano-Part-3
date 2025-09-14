@@ -1,7 +1,7 @@
 # Rick Romano — clean starter
 Minimal Next.js 14 + Tailwind starter with:
 - `/` landing page
-- `/ok` health route
+- `/api/ok` health route
 - `/api/auth/sleeper` Sleeper OAuth redirect
 - `/api/auth/yahoo` Yahoo OAuth redirect
 
@@ -18,4 +18,13 @@ Minimal Next.js 14 + Tailwind starter with:
 1. Import repo into Vercel (Framework: Next.js)
 2. Leave Root Directory blank (repo root)
 3. Set env vars above and deploy
-4. Test `/ok` and `/api/auth/yahoo`
+4. Test `/api/ok`, `/api/healthz`, and `/api/auth/yahoo`
+
+## Quick start
+
+1. Copy `.env.example` to `.env` and fill required values
+2. Install deps: `pnpm install`
+3. Dev server: `pnpm dev`
+4. Sleeper doctor: `pnpm run doctor:sleeper -- --league <LEAGUE_ID>`
+5. Yahoo OAuth: Visit `/auth/yahoo/login`, then `pnpm run doctor:yahoo`
+

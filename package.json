@@ -8,7 +8,10 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "npm run typecheck && vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "doctor:sleeper": "tsx scripts/sleeper.doctor.ts",
+    "doctor:yahoo": "tsx scripts/yahoo.doctor.ts",
+    "doctor:all": "pnpm run doctor:sleeper && pnpm run doctor:yahoo"
   },
   "dependencies": {
     "next": "14.2.5",
