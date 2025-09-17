@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getOrCreateUid } from '../../../../lib/user';
+import { getOrCreateUid, ensureAppUser } from '../../../../lib/user';
 import { buildAuth, oauthExchange } from '../../../../lib/providers/yahoo';
 import { encryptToken } from '../../../../lib/security';
 import { getSupabaseAdmin } from '../../../../lib/db';
@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
     try {
       const tokens = await oauthExchange(code); // implemented in lib/providers/yahoo.ts
       if (tokens && uid) {
+        await ensureAppUser(uid);
         const supabase = getSupabaseAdmin();
         const access_enc = await encryptToken(tokens.access_token);
         const refresh_enc = tokens.refresh_token
