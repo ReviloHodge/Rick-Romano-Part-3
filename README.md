@@ -6,6 +6,7 @@ Minimal Next.js 14 + Tailwind starter with:
 - `/api/auth/yahoo` Yahoo OAuth redirect
 
 ## Env vars (Vercel → Project → Settings → Environment Variables)
+- `KMS_KEY` — **required in all environments**; 32+ character key for encrypting tokens
 - `SLEEPER_CLIENT_ID` / `SLEEPER_CLIENT_SECRET`
 - `SLEEPER_REDIRECT_URI` — `https://<your-domain>/api/auth/sleeper`
 - `YAHOO_CLIENT_ID` / `YAHOO_CLIENT_SECRET`
